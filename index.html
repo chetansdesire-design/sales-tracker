@@ -63,7 +63,7 @@
     </header>
 
     <div class="stats-grid">
-        <div class="stat-card"><h3>Goal</h3><p id="goalVal">₹10L</p></div>
+        <div class="stat-card"><h3>Target</h3><p id="targetValText">₹10L</p></div>
         <div class="stat-card"><h3><span id="statTitle">Achieved</span></h3><p id="totalVal" style="color: var(--success);">₹0</p></div>
         <div class="stat-card"><h3>Gap</h3><p id="gapVal" style="color: var(--danger);">₹10L</p></div>
     </div>
@@ -173,7 +173,7 @@
             document.getElementById('progLabel').innerText = "Overall Team Progress";
         }
         
-        document.getElementById('goalVal').innerText = `₹${(targetAmount/100000).toFixed(0)}L`;
+        document.getElementById('targetValText').innerText = `₹${(targetAmount/100000).toFixed(0)}L`;
         
         initCharts();
         db.ref('sales').on('value', (snapshot) => {
@@ -224,8 +224,8 @@
 
         displayTotal = (currentUser === 'admin') ? teamTotal : (pieData[currentUser] || 0);
 
-        const teamGoal = INDIVIDUAL_TARGET * SALESMEN.length;
-        const progPerc = Math.min(100, (teamTotal / teamGoal) * 100).toFixed(1);
+        const teamTargetTotal = INDIVIDUAL_TARGET * SALESMEN.length;
+        const progPerc = Math.min(100, (teamTotal / teamTargetTotal) * 100).toFixed(1);
         document.getElementById('progressBar').style.width = progPerc + '%';
         document.getElementById('progressPercent').innerText = progPerc + '%';
 
