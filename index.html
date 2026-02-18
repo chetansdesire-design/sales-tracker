@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Pro Sales Tracker</title>
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root { --primary: #0f172a; --accent: #3b82f6; --success: #10b981; --danger: #f43f5e; --admin: #8b5cf6; --bg: #f8fafc; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); margin: 0; padding: 10px; -webkit-tap-highlight-color: transparent; }
+        .container { max-width: 1100px; margin: auto; display: none; }
+        #loginOverlay { position: fixed; inset: 0; background: var(--primary); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+        .login-card { background: white; padding: 30px; border-radius: 20px; width: 90%; max-width: 380px; text-align: center; }
+        .login-card input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #e2e8f0; border-radius: 10px; box-sizing: border-box; font-size: 16px; }
+        .btn-login { width: 100%; padding: 14px; background: var(--accent); color: white; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; }
+        
+        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding: 10px 0; }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 10px; margin-bottom: 15px; }
+        .stat-card { background: white; padding: 15px; border-radius: 15px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .stat-card h3 { font-size: 11px; color: #64748b; margin: 0; text-transform: uppercase; }
+        .stat-card p { font-size: 17px; font-weight: 800; margin: 5px 0 0; }
+
+        .progress-container { background: white; padding: 15px; border-radius: 15px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .progress-bar-bg { width: 100%; background: #e2e8f0; height: 10px; border-radius: 10px; overflow: hidden; margin-top: 8px; }
+        #progressBar { width: 0%; height: 100%; background: linear-gradient(90deg, var(--accent), var(--success)); transition: width 0.6s ease; }
+
+        .chart-grid { display: grid; grid-template-columns: 1fr; gap: 15px; margin-bottom: 20px; }
+        @media (min-width: 768px) { .chart-grid.admin-mode { grid-template-columns: 1fr 1fr; } }
+        .chart-box { background: white; padding: 15px; border-radius: 15px; height: 280px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+
+        .form-panel { background: var(--primary); color: white; padding: 20px; border-radius: 15px; margin-bottom: 20px; }
+        .form-grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
+        @media (min-width: 768px) { .form-grid { grid-template-columns: repeat(5, 1fr); } }
+        
+        input { padding: 12px; border-radius: 8px; border: 1px solid #334155; font-size: 16px; }
+        .btn-add { background: var(--success); color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        .btn-danger { background: var(--danger); color: white; border: none; padding: 8px 15px; border-radius: 8px; font-size: 12px; cursor: pointer; }
+
+        .table-wrap { background: white; border-radius: 15px; overflow-x: auto; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        table { width: 100%; border-collapse: collapse; min-width: 550px; }
+        th { background: #f1f5f9; padding: 12px; text-align: left; font-size: 11px; color: #64748b; }
+        td { padding: 12px; border-top: 1px solid #f1f5f9; font-size: 13px; }
+        .badge { padding: 3px 8px; border-radius: 6px; font-size: 10px; background: #e2e8f0; font-weight: 700; }
+    </style>
+</head>
+<body>
+
+<div id="loginOverlay">
+    <div class="login-card">
+        <h2 style="margin:0 0 20px 0;">Team Sales Portal</h2>
+        <input type="text" id="loginUser" placeholder="Username">
+        <input type="password" id="loginPass" placeholder="Password">
+        <button class="btn-login" onclick="handleLogin()">Sign In</button>
+    </div>
+</div>
+
+<div class="container" id="mainApp">
+    <header>
+        <div><h2 id="welcomeName" style="margin:0;">Hi</h2><span id="roleBadge" class="badge">Sales Team</span></div>
+        <button onclick="handleLogout()" style="cursor:pointer; border:none; background:none; color:var(--danger); font-weight:bold;">Logout</button>
+    </header>
+
+    <div class="stats-grid">
+        <div class="stat-card"><h3>Goal</h3><p id="goalVal">₹10L</p></div>
+        <div class="stat-card"><h3><span id="statTitle">Achieved</span></h3><p id="totalVal" style="color: var(--success);">₹0</p></div>
+        <div class="stat-card"><h3>Gap</h3><p id="gapVal" style="color: var(--danger);">₹10L</p></div>
+    </div>
+
+    <div class="progress-container">
+        <div style="display:flex; justify-content:space-between; font-size:12px; font-weight:bold; color:#475569;">
+            <span id="progLabel">Team Progress</span>
+            <span id="progressPercent">0%</span>
+        </div>
+        <div class="progress-bar-bg"><div id="progressBar"></div></div>
+    </div>
+
+    <div class="chart-grid" id="chartGrid">
+        <div class="chart-box"><canvas id="lineChart"></canvas></div>
+        <div class="chart-box" id="pieBox" style="display:none;"><canvas id="pieChart"></canvas></div>
+    </div>
+
+    <div id="adminSection" style="display:none;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+            <h3 style="font-size: 15px; margin:0;">🏆 Sales Leaderboard</h3>
+            <button class="btn-danger" onclick="clearAllData()">🗑️ Clear Data (1996)</button>
+        </div>
+        <div class="table-wrap">
+            <table>
+                <thead><tr><th>Rank</th><th>Salesman</th><th style="text-align:right">Total Revenue</th></tr></thead>
+                <tbody id="leaderboardBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="form-panel" id="inputPanel">
+        <div class="form-grid">
+            <input type="date" id="date">
+            <input type="text" id="billNo" placeholder="Bill No">
+            <input type="text" id="customer" placeholder="Customer Name">
+            <input type="number" id="amount" placeholder="Amount ₹">
+            <button class="btn-add" onclick="addEntry()">Submit Sale</button>
+        </div>
+    </div>
+
+    <h3 style="font-size: 15px; margin: 10px 5px;">Transaction History</h3>
+    <div class="table-wrap">
+        <table id="salesTable">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Bill No</th>
+                    <th>Customer</th>
+                    <th id="thUser" style="display:none;">Salesman</th>
+                    <th>Amount</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    const INDIVIDUAL_TARGET = 1000000; 
+    const firebaseConfig = {
+        apiKey: "AIzaSyCkciiLP3SIrK1yNNqhs1JtlCc_c55YOOY",
+        authDomain: "sales-tracker-27660.app",
+        databaseURL: "https://sales-tracker-27660-default-rtdb.firebaseio.com/",
+        projectId: "sales-tracker-27660",
+        appId: "1:960783153617:web:9b9fa521836b9f5ef488f0"
+    };
+
+    const SALESMEN = ["arun", "adarsh", "javid", "other"];
+    const USERS = { "arun": "arun123", "adarsh": "adarsh123", "javid": "javid123", "other": "other123", "admin": "admin789" };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    let currentUser = localStorage.getItem('activeUser');
+    let allSales = [];
+    let lineChart, pieChart;
+
+    window.onload = () => { if(currentUser) showApp(); };
+
+    function handleLogin() {
+        const u = document.getElementById('loginUser').value.toLowerCase().trim();
+        const p = document.getElementById('loginPass').value;
+        if(USERS[u] && USERS[u] === p) {
+            currentUser = u;
+            localStorage.setItem('activeUser', u);
+            showApp();
+        } else { alert("Invalid Credentials"); }
+    }
+
+    function showApp() {
+        document.getElementById('loginOverlay').style.display = 'none';
+        document.getElementById('mainApp').style.display = 'block';
+        document.getElementById('welcomeName').innerText = `Hi, ${currentUser}`;
+        document.getElementById('date').valueAsDate = new Date();
+        
+        let targetAmount = INDIVIDUAL_TARGET;
+
+        if(currentUser === 'admin') {
+            targetAmount = INDIVIDUAL_TARGET * SALESMEN.length; 
+            document.getElementById('inputPanel').style.display = 'none';
+            document.getElementById('thUser').style.display = 'table-cell';
+            document.getElementById('roleBadge').innerText = "Administrator";
+            document.getElementById('pieBox').style.display = 'block';
+            document.getElementById('adminSection').style.display = 'block';
+            document.getElementById('chartGrid').classList.add('admin-mode');
+            document.getElementById('statTitle').innerText = "Team Total";
+            document.getElementById('progLabel').innerText = "Overall Team Progress";
+        }
+        
+        document.getElementById('goalVal').innerText = `₹${(targetAmount/100000).toFixed(0)}L`;
+        
+        initCharts();
+        db.ref('sales').on('value', (snapshot) => {
+            const data = snapshot.val();
+            allSales = data ? Object.entries(data).map(([key, val]) => ({...val, fireId: key})) : [];
+            updateUI(targetAmount);
+        });
+    }
+
+    function clearAllData() {
+        const pass = prompt("Enter Secret Password to clear database:");
+        if(pass === "1996") {
+            if(confirm("Permanent Delete: Are you sure?")) {
+                db.ref('sales').remove();
+            }
+        } else { alert("Wrong Password"); }
+    }
+
+    function addEntry() {
+        const amount = parseFloat(document.getElementById('amount').value);
+        const bill = document.getElementById('billNo').value || '-';
+        const customer = document.getElementById('customer').value;
+        const date = document.getElementById('date').value;
+        if(!customer || isNaN(amount) || !date) return alert("Fill all fields");
+        db.ref('sales').push({ salesman: currentUser, date: date, billNo: bill, customer: customer, amount: amount, timestamp: Date.now() });
+        ['billNo', 'customer', 'amount'].forEach(id => document.getElementById(id).value = '');
+    }
+
+    function deleteEntry(fireId) {
+        if(currentUser === 'admin' && confirm("Delete record?")) db.ref('sales/' + fireId).remove();
+    }
+
+    function updateUI(activeTarget) {
+        const tbody = document.getElementById('tableBody');
+        const leaderBody = document.getElementById('leaderboardBody');
+        tbody.innerHTML = '';
+        leaderBody.innerHTML = '';
+
+        let displayTotal = 0;
+        let teamTotal = 0;
+        let lineData = {};
+        let pieData = {};
+
+        allSales.forEach(item => {
+            teamTotal += item.amount;
+            pieData[item.salesman] = (pieData[item.salesman] || 0) + item.amount;
+        });
+
+        displayTotal = (currentUser === 'admin') ? teamTotal : (pieData[currentUser] || 0);
+
+        const teamGoal = INDIVIDUAL_TARGET * SALESMEN.length;
+        const progPerc = Math.min(100, (teamTotal / teamGoal) * 100).toFixed(1);
+        document.getElementById('progressBar').style.width = progPerc + '%';
+        document.getElementById('progressPercent').innerText = progPerc + '%';
+
+        if(currentUser === 'admin') {
+            Object.entries(pieData).sort((a,b) => b[1] - a[1]).forEach(([name, amt], i) => {
+                const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i+1);
+                leaderBody.innerHTML += `<tr><td>${medal}</td><td style="text-transform:capitalize">${name}</td><td style="text-align:right; font-weight:bold">₹${amt.toLocaleString('en-IN')}</td></tr>`;
+            });
+            pieChart.data.labels = Object.keys(pieData);
+            pieChart.data.datasets[0].data = Object.values(pieData);
+            pieChart.update();
+        }
+
+        const filtered = (currentUser === 'admin') ? allSales : allSales.filter(s => s.salesman === currentUser);
+        filtered.sort((a,b) => new Date(a.date) - new Date(b.date)).forEach(item => {
+            lineData[item.date] = (lineData[item.date] || 0) + item.amount;
+        });
+
+        [...filtered].reverse().forEach(item => {
+            tbody.innerHTML += `<tr>
+                <td>${item.date}</td>
+                <td><span class="badge" style="background:#f1f5f9">${item.billNo || '-'}</span></td>
+                <td>${item.customer}</td>
+                ${currentUser === 'admin' ? `<td><span class="badge">${item.salesman}</span></td>` : ''}
+                <td>₹${item.amount.toLocaleString('en-IN')}</td>
+                <td>${currentUser === 'admin' ? `<button onclick="deleteEntry('${item.fireId}')" style="border:none; background:none; cursor:pointer;">🗑️</button>` : ''}</td>
+            </tr>`;
+        });
+
+        document.getElementById('totalVal').innerText = `₹${displayTotal.toLocaleString('en-IN')}`;
+        document.getElementById('gapVal').innerText = `₹${Math.max(0, activeTarget - displayTotal).toLocaleString('en-IN')}`;
+        
+        lineChart.data.labels = Object.keys(lineData);
+        lineChart.data.datasets[0].data = Object.values(lineData);
+        lineChart.update();
+    }
+
+    function initCharts() {
+        if(lineChart) lineChart.destroy();
+        lineChart = new Chart(document.getElementById('lineChart'), {
+            type: 'line',
+            data: { labels: [], datasets: [{ label: 'Sales', data: [], borderColor: '#3b82f6', tension: 0.3, fill: true, backgroundColor: 'rgba(59, 130, 246, 0.1)' }] },
+            options: { maintainAspectRatio: false, plugins: { legend: { display: false } } }
+        });
+        if(currentUser === 'admin') {
+            if(pieChart) pieChart.destroy();
+            pieChart = new Chart(document.getElementById('pieChart'), {
+                type: 'pie',
+                data: { labels: [], datasets: [{ data: [], backgroundColor: ['#3b82f6', '#10b981', '#f43f5e', '#8b5cf6', '#f59e0b'] }] },
+                options: { maintainAspectRatio: false }
+            });
+        }
+    }
+
+    function handleLogout() { localStorage.removeItem('activeUser'); location.reload(); }
+</script>
+</body>
+</html>
