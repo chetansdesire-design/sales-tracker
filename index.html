@@ -109,12 +109,9 @@
         <table id="salesTable">
             <thead>
                 <tr>
-                    <th>Date</th>
-                    <th>Bill No</th>
-                    <th>Customer</th>
+                    <th>Date</th><th>Bill No</th><th>Customer</th>
                     <th id="thUser" style="display:none;">Salesman</th>
-                    <th>Amount</th>
-                    <th></th>
+                    <th>Amount</th><th></th>
                 </tr>
             </thead>
             <tbody id="tableBody"></tbody>
@@ -143,6 +140,13 @@
 
     window.onload = () => { if(currentUser) showApp(); };
 
+    // --- NEW: AUTO LOGOUT ON MINIMIZE ---
+    document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === 'hidden' && currentUser) {
+            handleLogout();
+        }
+    });
+
     function handleLogin() {
         const u = document.getElementById('loginUser').value.toLowerCase().trim();
         const p = document.getElementById('loginPass').value;
@@ -160,7 +164,6 @@
         document.getElementById('date').valueAsDate = new Date();
         
         let targetAmount = INDIVIDUAL_TARGET;
-
         if(currentUser === 'admin') {
             targetAmount = INDIVIDUAL_TARGET * SALESMEN.length; 
             document.getElementById('inputPanel').style.display = 'none';
@@ -172,7 +175,6 @@
             document.getElementById('statTitle').innerText = "Team Total";
             document.getElementById('progLabel').innerText = "Overall Team Progress";
         }
-        
         document.getElementById('targetValText').innerText = `₹${(targetAmount/100000).toFixed(0)}L`;
         
         initCharts();
@@ -186,9 +188,7 @@
     function clearAllData() {
         const pass = prompt("Enter Secret Password to clear database:");
         if(pass === "1996") {
-            if(confirm("Permanent Delete: Are you sure?")) {
-                db.ref('sales').remove();
-            }
+            if(confirm("Permanent Delete: Are you sure?")) db.ref('sales').remove();
         } else { alert("Wrong Password"); }
     }
 
@@ -209,13 +209,8 @@
     function updateUI(activeTarget) {
         const tbody = document.getElementById('tableBody');
         const leaderBody = document.getElementById('leaderboardBody');
-        tbody.innerHTML = '';
-        leaderBody.innerHTML = '';
-
-        let displayTotal = 0;
-        let teamTotal = 0;
-        let lineData = {};
-        let pieData = {};
+        tbody.innerHTML = ''; leaderBody.innerHTML = '';
+        let displayTotal = 0, teamTotal = 0, lineData = {}, pieData = {};
 
         allSales.forEach(item => {
             teamTotal += item.amount;
@@ -223,7 +218,6 @@
         });
 
         displayTotal = (currentUser === 'admin') ? teamTotal : (pieData[currentUser] || 0);
-
         const teamTargetTotal = INDIVIDUAL_TARGET * SALESMEN.length;
         const progPerc = Math.min(100, (teamTotal / teamTargetTotal) * 100).toFixed(1);
         document.getElementById('progressBar').style.width = progPerc + '%';
@@ -245,22 +239,12 @@
         });
 
         [...filtered].reverse().forEach(item => {
-            tbody.innerHTML += `<tr>
-                <td>${item.date}</td>
-                <td><span class="badge" style="background:#f1f5f9">${item.billNo || '-'}</span></td>
-                <td>${item.customer}</td>
-                ${currentUser === 'admin' ? `<td><span class="badge">${item.salesman}</span></td>` : ''}
-                <td>₹${item.amount.toLocaleString('en-IN')}</td>
-                <td>${currentUser === 'admin' ? `<button onclick="deleteEntry('${item.fireId}')" style="border:none; background:none; cursor:pointer;">🗑️</button>` : ''}</td>
-            </tr>`;
+            tbody.innerHTML += `<tr><td>${item.date}</td><td><span class="badge" style="background:#f1f5f9">${item.billNo || '-'}</span></td><td>${item.customer}</td>${currentUser === 'admin' ? `<td><span class="badge">${item.salesman}</span></td>` : ''}<td>₹${item.amount.toLocaleString('en-IN')}</td><td>${currentUser === 'admin' ? `<button onclick="deleteEntry('${item.fireId}')" style="border:none; background:none; cursor:pointer;">🗑️</button>` : ''}</td></tr>`;
         });
 
         document.getElementById('totalVal').innerText = `₹${displayTotal.toLocaleString('en-IN')}`;
         document.getElementById('gapVal').innerText = `₹${Math.max(0, activeTarget - displayTotal).toLocaleString('en-IN')}`;
-        
-        lineChart.data.labels = Object.keys(lineData);
-        lineChart.data.datasets[0].data = Object.values(lineData);
-        lineChart.update();
+        lineChart.data.labels = Object.keys(lineData); lineChart.data.datasets[0].data = Object.values(lineData); lineChart.update();
     }
 
     function initCharts() {
@@ -273,8 +257,7 @@
         if(currentUser === 'admin') {
             if(pieChart) pieChart.destroy();
             pieChart = new Chart(document.getElementById('pieChart'), {
-                type: 'pie',
-                data: { labels: [], datasets: [{ data: [], backgroundColor: ['#3b82f6', '#10b981', '#f43f5e', '#8b5cf6', '#f59e0b'] }] },
+                type: 'pie', data: { labels: [], datasets: [{ data: [], backgroundColor: ['#3b82f6', '#10b981', '#f43f5e', '#8b5cf6', '#f59e0b'] }] },
                 options: { maintainAspectRatio: false }
             });
         }
