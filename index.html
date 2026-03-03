@@ -15,29 +15,25 @@
         .login-card { background: white; padding: 30px; border-radius: 20px; width: 90%; max-width: 380px; text-align: center; }
         .login-card input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #e2e8f0; border-radius: 10px; box-sizing: border-box; font-size: 16px; }
         .btn-login { width: 100%; padding: 14px; background: var(--accent); color: white; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; }
-        
         header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding: 10px 0; }
         .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 10px; margin-bottom: 15px; }
         .stat-card { background: white; padding: 15px; border-radius: 15px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
         .stat-card h3 { font-size: 11px; color: #64748b; margin: 0; text-transform: uppercase; }
         .stat-card p { font-size: 17px; font-weight: 800; margin: 5px 0 0; }
-
+        .filter-section { margin-bottom: 15px; background: white; padding: 10px; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.03); }
+        select { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0; font-size: 14px; font-weight: 600; color: var(--primary); }
         .progress-container { background: white; padding: 15px; border-radius: 15px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
         .progress-bar-bg { width: 100%; background: #e2e8f0; height: 10px; border-radius: 10px; overflow: hidden; margin-top: 8px; }
         #progressBar { width: 0%; height: 100%; background: linear-gradient(90deg, var(--accent), var(--success)); transition: width 0.6s ease; }
-
         .chart-grid { display: grid; grid-template-columns: 1fr; gap: 15px; margin-bottom: 20px; }
         @media (min-width: 768px) { .chart-grid.admin-mode { grid-template-columns: 1fr 1fr; } }
         .chart-box { background: white; padding: 15px; border-radius: 15px; height: 280px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-
         .form-panel { background: var(--primary); color: white; padding: 20px; border-radius: 15px; margin-bottom: 20px; }
         .form-grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
         @media (min-width: 768px) { .form-grid { grid-template-columns: repeat(5, 1fr); } }
-        
         input { padding: 12px; border-radius: 8px; border: 1px solid #334155; font-size: 16px; }
         .btn-add { background: var(--success); color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; }
         .btn-danger { background: var(--danger); color: white; border: none; padding: 8px 15px; border-radius: 8px; font-size: 12px; cursor: pointer; }
-
         .table-wrap { background: white; border-radius: 15px; overflow-x: auto; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 20px; }
         table { width: 100%; border-collapse: collapse; min-width: 550px; }
         th { background: #f1f5f9; padding: 12px; text-align: left; font-size: 11px; color: #64748b; }
@@ -62,6 +58,11 @@
         <button onclick="handleLogout()" style="cursor:pointer; border:none; background:none; color:var(--danger); font-weight:bold;">Logout</button>
     </header>
 
+    <div class="filter-section">
+        <label style="font-size: 10px; color: #64748b; font-weight: 800; display:block; margin-bottom:5px;">SELECT MONTH</label>
+        <select id="monthFilter" onchange="runUpdateUI()"></select>
+    </div>
+
     <div class="stats-grid">
         <div class="stat-card"><h3>Target</h3><p id="targetValText">₹10L</p></div>
         <div class="stat-card"><h3><span id="statTitle">Achieved</span></h3><p id="totalVal" style="color: var(--success);">₹0</p></div>
@@ -83,12 +84,12 @@
 
     <div id="adminSection" style="display:none;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-            <h3 style="font-size: 15px; margin:0;">🏆 Sales Leaderboard</h3>
-            <button class="btn-danger" onclick="clearAllData()">🗑️ Clear Data (1996)</button>
+            <h3 style="font-size: 15px; margin:0;">🏆 Monthly Leaderboard</h3>
+            <button class="btn-danger" onclick="clearAllData()">🗑️ Reset Database (1996)</button>
         </div>
         <div class="table-wrap">
             <table>
-                <thead><tr><th>Rank</th><th>Salesman</th><th style="text-align:right">Total Revenue</th></tr></thead>
+                <thead><tr><th>Rank</th><th>Salesman</th><th style="text-align:right">Monthly Rev</th></tr></thead>
                 <tbody id="leaderboardBody"></tbody>
             </table>
         </div>
@@ -140,7 +141,7 @@
 
     window.onload = () => { if(currentUser) showApp(); };
 
-    // --- NEW: AUTO LOGOUT ON MINIMIZE ---
+    // --- AUTO LOGOUT ON MINIMIZE ---
     document.addEventListener("visibilitychange", () => {
         if (document.visibilityState === 'hidden' && currentUser) {
             handleLogout();
@@ -163,9 +164,7 @@
         document.getElementById('welcomeName').innerText = `Hi, ${currentUser}`;
         document.getElementById('date').valueAsDate = new Date();
         
-        let targetAmount = INDIVIDUAL_TARGET;
         if(currentUser === 'admin') {
-            targetAmount = INDIVIDUAL_TARGET * SALESMEN.length; 
             document.getElementById('inputPanel').style.display = 'none';
             document.getElementById('thUser').style.display = 'table-cell';
             document.getElementById('roleBadge').innerText = "Administrator";
@@ -173,23 +172,82 @@
             document.getElementById('adminSection').style.display = 'block';
             document.getElementById('chartGrid').classList.add('admin-mode');
             document.getElementById('statTitle').innerText = "Team Total";
-            document.getElementById('progLabel').innerText = "Overall Team Progress";
         }
-        document.getElementById('targetValText').innerText = `₹${(targetAmount/100000).toFixed(0)}L`;
         
         initCharts();
         db.ref('sales').on('value', (snapshot) => {
             const data = snapshot.val();
             allSales = data ? Object.entries(data).map(([key, val]) => ({...val, fireId: key})) : [];
-            updateUI(targetAmount);
+            updateMonthDropdown();
+            runUpdateUI();
         });
     }
 
-    function clearAllData() {
-        const pass = prompt("Enter Secret Password to clear database:");
-        if(pass === "1996") {
-            if(confirm("Permanent Delete: Are you sure?")) db.ref('sales').remove();
-        } else { alert("Wrong Password"); }
+    function updateMonthDropdown() {
+        const filter = document.getElementById('monthFilter');
+        const currentMonth = new Date().toISOString().slice(0, 7);
+        const monthsInDB = [...new Set(allSales.map(s => s.date.slice(0, 7)))];
+        if (!monthsInDB.includes(currentMonth)) monthsInDB.push(currentMonth);
+        monthsInDB.sort().reverse();
+
+        const savedValue = filter.value;
+        filter.innerHTML = monthsInDB.map(m => {
+            const date = new Date(m + "-01");
+            return `<option value="${m}">${date.toLocaleString('default', { month: 'long', year: 'numeric' })}</option>`;
+        }).join('');
+        filter.value = (savedValue && monthsInDB.includes(savedValue)) ? savedValue : currentMonth;
+    }
+
+    function runUpdateUI() {
+        const target = (currentUser === 'admin') ? INDIVIDUAL_TARGET * SALESMEN.length : INDIVIDUAL_TARGET;
+        document.getElementById('targetValText').innerText = `₹${(target/100000).toFixed(0)}L`;
+        updateUI(target);
+    }
+
+    function updateUI(activeTarget) {
+        const selectedMonth = document.getElementById('monthFilter').value;
+        const tbody = document.getElementById('tableBody');
+        const leaderBody = document.getElementById('leaderboardBody');
+        tbody.innerHTML = ''; leaderBody.innerHTML = '';
+        
+        let displayTotal = 0, teamTotal = 0, lineData = {}, pieData = {};
+
+        const monthlyData = allSales.filter(item => item.date.startsWith(selectedMonth));
+
+        monthlyData.forEach(item => {
+            teamTotal += item.amount;
+            pieData[item.salesman] = (pieData[item.salesman] || 0) + item.amount;
+        });
+
+        displayTotal = (currentUser === 'admin') ? teamTotal : (pieData[currentUser] || 0);
+        
+        const teamTargetTotal = INDIVIDUAL_TARGET * SALESMEN.length;
+        const progPerc = Math.min(100, (teamTotal / teamTargetTotal) * 100).toFixed(1);
+        document.getElementById('progressBar').style.width = progPerc + '%';
+        document.getElementById('progressPercent').innerText = progPerc + '%';
+
+        if(currentUser === 'admin') {
+            Object.entries(pieData).sort((a,b) => b[1] - a[1]).forEach(([name, amt], i) => {
+                const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i+1);
+                leaderBody.innerHTML += `<tr><td>${medal}</td><td style="text-transform:capitalize">${name}</td><td style="text-align:right; font-weight:bold">₹${amt.toLocaleString('en-IN')}</td></tr>`;
+            });
+            pieChart.data.labels = Object.keys(pieData);
+            pieChart.data.datasets[0].data = Object.values(pieData);
+            pieChart.update();
+        }
+
+        const filtered = (currentUser === 'admin') ? monthlyData : monthlyData.filter(s => s.salesman === currentUser);
+        filtered.sort((a,b) => new Date(a.date) - new Date(b.date)).forEach(item => {
+            lineData[item.date] = (lineData[item.date] || 0) + item.amount;
+        });
+
+        [...filtered].reverse().forEach(item => {
+            tbody.innerHTML += `<tr><td>${item.date}</td><td><span class="badge" style="background:#f1f5f9">${item.billNo || '-'}</span></td><td>${item.customer}</td>${currentUser === 'admin' ? `<td><span class="badge">${item.salesman}</span></td>` : ''}<td>₹${item.amount.toLocaleString('en-IN')}</td><td>${currentUser === 'admin' ? `<button onclick="deleteEntry('${item.fireId}')" style="border:none; background:none; cursor:pointer;">🗑️</button>` : ''}</td></tr>`;
+        });
+
+        document.getElementById('totalVal').innerText = `₹${displayTotal.toLocaleString('en-IN')}`;
+        document.getElementById('gapVal').innerText = `₹${Math.max(0, activeTarget - displayTotal).toLocaleString('en-IN')}`;
+        lineChart.data.labels = Object.keys(lineData); lineChart.data.datasets[0].data = Object.values(lineData); lineChart.update();
     }
 
     function addEntry() {
@@ -206,45 +264,9 @@
         if(currentUser === 'admin' && confirm("Delete record?")) db.ref('sales/' + fireId).remove();
     }
 
-    function updateUI(activeTarget) {
-        const tbody = document.getElementById('tableBody');
-        const leaderBody = document.getElementById('leaderboardBody');
-        tbody.innerHTML = ''; leaderBody.innerHTML = '';
-        let displayTotal = 0, teamTotal = 0, lineData = {}, pieData = {};
-
-        allSales.forEach(item => {
-            teamTotal += item.amount;
-            pieData[item.salesman] = (pieData[item.salesman] || 0) + item.amount;
-        });
-
-        displayTotal = (currentUser === 'admin') ? teamTotal : (pieData[currentUser] || 0);
-        const teamTargetTotal = INDIVIDUAL_TARGET * SALESMEN.length;
-        const progPerc = Math.min(100, (teamTotal / teamTargetTotal) * 100).toFixed(1);
-        document.getElementById('progressBar').style.width = progPerc + '%';
-        document.getElementById('progressPercent').innerText = progPerc + '%';
-
-        if(currentUser === 'admin') {
-            Object.entries(pieData).sort((a,b) => b[1] - a[1]).forEach(([name, amt], i) => {
-                const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i+1);
-                leaderBody.innerHTML += `<tr><td>${medal}</td><td style="text-transform:capitalize">${name}</td><td style="text-align:right; font-weight:bold">₹${amt.toLocaleString('en-IN')}</td></tr>`;
-            });
-            pieChart.data.labels = Object.keys(pieData);
-            pieChart.data.datasets[0].data = Object.values(pieData);
-            pieChart.update();
-        }
-
-        const filtered = (currentUser === 'admin') ? allSales : allSales.filter(s => s.salesman === currentUser);
-        filtered.sort((a,b) => new Date(a.date) - new Date(b.date)).forEach(item => {
-            lineData[item.date] = (lineData[item.date] || 0) + item.amount;
-        });
-
-        [...filtered].reverse().forEach(item => {
-            tbody.innerHTML += `<tr><td>${item.date}</td><td><span class="badge" style="background:#f1f5f9">${item.billNo || '-'}</span></td><td>${item.customer}</td>${currentUser === 'admin' ? `<td><span class="badge">${item.salesman}</span></td>` : ''}<td>₹${item.amount.toLocaleString('en-IN')}</td><td>${currentUser === 'admin' ? `<button onclick="deleteEntry('${item.fireId}')" style="border:none; background:none; cursor:pointer;">🗑️</button>` : ''}</td></tr>`;
-        });
-
-        document.getElementById('totalVal').innerText = `₹${displayTotal.toLocaleString('en-IN')}`;
-        document.getElementById('gapVal').innerText = `₹${Math.max(0, activeTarget - displayTotal).toLocaleString('en-IN')}`;
-        lineChart.data.labels = Object.keys(lineData); lineChart.data.datasets[0].data = Object.values(lineData); lineChart.update();
+    function clearAllData() {
+        const pass = prompt("Enter Secret Password:");
+        if(pass === "1996") { if(confirm("Delete ALL history?")) db.ref('sales').remove(); }
     }
 
     function initCharts() {
