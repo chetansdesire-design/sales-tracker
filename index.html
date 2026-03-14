@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Pro Sales Tracker</title>
+    <title>Pro Sales Tracker v2.1</title>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -13,7 +13,7 @@
         .container { max-width: 1100px; margin: auto; display: none; }
         #loginOverlay { position: fixed; inset: 0; background: var(--primary); display: flex; align-items: center; justify-content: center; z-index: 1000; }
         .login-card { background: white; padding: 30px; border-radius: 20px; width: 90%; max-width: 380px; text-align: center; }
-        .login-card input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #e2e8f0; border-radius: 10px; box-sizing: border-box; font-size: 16px; }
+        .login-card input, .settings-panel input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #e2e8f0; border-radius: 10px; box-sizing: border-box; font-size: 16px; }
         .btn-login { width: 100%; padding: 14px; background: var(--accent); color: white; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; }
         header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding: 10px 0; }
         .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 10px; margin-bottom: 15px; }
@@ -25,12 +25,10 @@
         .progress-container { background: white; padding: 15px; border-radius: 15px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
         .progress-bar-bg { width: 100%; background: #e2e8f0; height: 10px; border-radius: 10px; overflow: hidden; margin-top: 8px; }
         #progressBar { width: 0%; height: 100%; background: linear-gradient(90deg, var(--accent), var(--success)); transition: width 0.6s ease; }
-        .chart-grid { display: grid; grid-template-columns: 1fr; gap: 15px; margin-bottom: 20px; }
-        @media (min-width: 768px) { .chart-grid.admin-mode { grid-template-columns: 1fr 1fr; } }
-        .chart-box { background: white; padding: 15px; border-radius: 15px; height: 280px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .chart-box { background: white; padding: 15px; border-radius: 15px; height: 280px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 15px; }
         .form-panel { background: var(--primary); color: white; padding: 20px; border-radius: 15px; margin-bottom: 20px; }
         .form-grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
-        @media (min-width: 768px) { .form-grid { grid-template-columns: repeat(5, 1fr); } }
+        @media (min-width: 768px) { .form-grid { grid-template-columns: repeat(5, 1fr); } .chart-grid.admin-mode { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; } }
         input { padding: 12px; border-radius: 8px; border: 1px solid #334155; font-size: 16px; }
         .btn-add { background: var(--success); color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; }
         .btn-danger { background: var(--danger); color: white; border: none; padding: 8px 15px; border-radius: 8px; font-size: 12px; cursor: pointer; }
@@ -39,6 +37,8 @@
         th { background: #f1f5f9; padding: 12px; text-align: left; font-size: 11px; color: #64748b; }
         td { padding: 12px; border-top: 1px solid #f1f5f9; font-size: 13px; }
         .badge { padding: 3px 8px; border-radius: 6px; font-size: 10px; background: #e2e8f0; font-weight: 700; }
+        .settings-panel { display:none; background: white; padding: 20px; border-radius: 15px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .version-tag { font-size: 10px; color: #94a3b8; text-align: center; margin-top: 20px; }
     </style>
 </head>
 <body>
@@ -55,8 +55,20 @@
 <div class="container" id="mainApp">
     <header>
         <div><h2 id="welcomeName" style="margin:0;">Hi</h2><span id="roleBadge" class="badge">Sales Team</span></div>
-        <button onclick="handleLogout()" style="cursor:pointer; border:none; background:none; color:var(--danger); font-weight:bold;">Logout</button>
+        <div style="display:flex; gap:15px; align-items:center;">
+            <button onclick="toggleSettings()" style="cursor:pointer; border:none; background:none; font-size: 20px;">⚙️</button>
+            <button onclick="handleLogout()" style="cursor:pointer; border:none; background:none; color:var(--danger); font-weight:bold;">Logout</button>
+        </div>
     </header>
+
+    <div id="settingsPanel" class="settings-panel">
+        <h3 style="margin-top:0; font-size: 16px;">Account Settings</h3>
+        <div style="position: relative; max-width: 320px;">
+            <input type="password" id="newPass" placeholder="Enter New Password">
+            <span onclick="togglePassView()" id="eyeIcon" style="position: absolute; right: 10px; top: 22px; cursor: pointer;">👁️</span>
+            <button class="btn-login" onclick="updatePassword()" style="margin-top: 10px; padding: 10px;">Update Password</button>
+        </div>
+    </div>
 
     <div class="filter-section">
         <label style="font-size: 10px; color: #64748b; font-weight: 800; display:block; margin-bottom:5px;">SELECT MONTH</label>
@@ -85,7 +97,10 @@
     <div id="adminSection" style="display:none;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
             <h3 style="font-size: 15px; margin:0;">🏆 Monthly Leaderboard</h3>
-            <button class="btn-danger" onclick="clearAllData()">🗑️ Reset Database (1996)</button>
+            <div style="display:flex; gap:5px;">
+                <button onclick="exportToCSV()" style="background:var(--primary); color:white; border:none; padding:8px 12px; border-radius:8px; font-size:11px; cursor:pointer;">📥 CSV</button>
+                <button class="btn-danger" onclick="clearAllData()">🗑️ Reset</button>
+            </div>
         </div>
         <div class="table-wrap">
             <table>
@@ -118,6 +133,7 @@
             <tbody id="tableBody"></tbody>
         </table>
     </div>
+    <div class="version-tag">Version 2.1 | Secure Cloud Sync Active</div>
 </div>
 
 <script>
@@ -130,8 +146,8 @@
         appId: "1:960783153617:web:9b9fa521836b9f5ef488f0"
     };
 
+    const USERS_DEFAULT = { "arun": "arun123", "adarsh": "adarsh123", "javid": "javid123", "other": "other123", "admin": "admin789" };
     const SALESMEN = ["arun", "adarsh", "javid", "other"];
-    const USERS = { "arun": "arun123", "adarsh": "adarsh123", "javid": "javid123", "other": "other123", "admin": "admin789" };
 
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
@@ -141,17 +157,17 @@
 
     window.onload = () => { if(currentUser) showApp(); };
 
-    // --- AUTO LOGOUT ON MINIMIZE ---
     document.addEventListener("visibilitychange", () => {
-        if (document.visibilityState === 'hidden' && currentUser) {
-            handleLogout();
-        }
+        if (document.visibilityState === 'hidden' && currentUser) handleLogout();
     });
 
-    function handleLogin() {
+    async function handleLogin() {
         const u = document.getElementById('loginUser').value.toLowerCase().trim();
         const p = document.getElementById('loginPass').value;
-        if(USERS[u] && USERS[u] === p) {
+        const snapshot = await db.ref(`userConfigs/${u}`).once('value');
+        const customPass = snapshot.val() ? snapshot.val().password : null;
+        
+        if((customPass && customPass === p) || (!customPass && USERS_DEFAULT[u] === p)) {
             currentUser = u;
             localStorage.setItem('activeUser', u);
             showApp();
@@ -183,35 +199,58 @@
         });
     }
 
+    function toggleSettings() {
+        const p = document.getElementById('settingsPanel');
+        p.style.display = p.style.display === 'block' ? 'none' : 'block';
+    }
+
+    function togglePassView() {
+        const inp = document.getElementById('newPass');
+        const eye = document.getElementById('eyeIcon');
+        inp.type = inp.type === 'password' ? 'text' : 'password';
+        eye.innerText = inp.type === 'password' ? '👁️' : '🔒';
+    }
+
+    function updatePassword() {
+        const newP = document.getElementById('newPass').value;
+        if(newP.length < 4) return alert("Too short!");
+        db.ref(`userConfigs/${currentUser}`).set({ password: newP }).then(() => {
+            alert("Password updated!");
+            toggleSettings();
+        });
+    }
+
+    function exportToCSV() {
+        const month = document.getElementById('monthFilter').value;
+        const filtered = allSales.filter(s => s.date.startsWith(month));
+        let csv = "Date,Bill,Customer,Salesman,Amount\n";
+        filtered.forEach(s => csv += `${s.date},${s.billNo},"${s.customer}",${s.salesman},${s.amount}\n`);
+        const blob = new Blob([csv], {type: 'text/csv'});
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = `Sales_${month}.csv`; a.click();
+    }
+
     function updateMonthDropdown() {
         const filter = document.getElementById('monthFilter');
         const currentMonth = new Date().toISOString().slice(0, 7);
         const monthsInDB = [...new Set(allSales.map(s => s.date.slice(0, 7)))];
         if (!monthsInDB.includes(currentMonth)) monthsInDB.push(currentMonth);
         monthsInDB.sort().reverse();
-
         const savedValue = filter.value;
-        filter.innerHTML = monthsInDB.map(m => {
-            const date = new Date(m + "-01");
-            return `<option value="${m}">${date.toLocaleString('default', { month: 'long', year: 'numeric' })}</option>`;
-        }).join('');
+        filter.innerHTML = monthsInDB.map(m => `<option value="${m}">${new Date(m + "-01").toLocaleString('default', { month: 'long', year: 'numeric' })}</option>`).join('');
         filter.value = (savedValue && monthsInDB.includes(savedValue)) ? savedValue : currentMonth;
     }
 
     function runUpdateUI() {
         const target = (currentUser === 'admin') ? INDIVIDUAL_TARGET * SALESMEN.length : INDIVIDUAL_TARGET;
         document.getElementById('targetValText').innerText = `₹${(target/100000).toFixed(0)}L`;
-        updateUI(target);
-    }
-
-    function updateUI(activeTarget) {
         const selectedMonth = document.getElementById('monthFilter').value;
         const tbody = document.getElementById('tableBody');
         const leaderBody = document.getElementById('leaderboardBody');
         tbody.innerHTML = ''; leaderBody.innerHTML = '';
         
-        let displayTotal = 0, teamTotal = 0, lineData = {}, pieData = {};
-
+        let teamTotal = 0, pieData = {}, lineData = {};
         const monthlyData = allSales.filter(item => item.date.startsWith(selectedMonth));
 
         monthlyData.forEach(item => {
@@ -219,17 +258,14 @@
             pieData[item.salesman] = (pieData[item.salesman] || 0) + item.amount;
         });
 
-        displayTotal = (currentUser === 'admin') ? teamTotal : (pieData[currentUser] || 0);
-        
-        const teamTargetTotal = INDIVIDUAL_TARGET * SALESMEN.length;
-        const progPerc = Math.min(100, (teamTotal / teamTargetTotal) * 100).toFixed(1);
+        const displayTotal = (currentUser === 'admin') ? teamTotal : (pieData[currentUser] || 0);
+        const progPerc = Math.min(100, (teamTotal / (INDIVIDUAL_TARGET * SALESMEN.length)) * 100).toFixed(1);
         document.getElementById('progressBar').style.width = progPerc + '%';
         document.getElementById('progressPercent').innerText = progPerc + '%';
 
         if(currentUser === 'admin') {
             Object.entries(pieData).sort((a,b) => b[1] - a[1]).forEach(([name, amt], i) => {
-                const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i+1);
-                leaderBody.innerHTML += `<tr><td>${medal}</td><td style="text-transform:capitalize">${name}</td><td style="text-align:right; font-weight:bold">₹${amt.toLocaleString('en-IN')}</td></tr>`;
+                leaderBody.innerHTML += `<tr><td>${i+1}</td><td style="text-transform:capitalize">${name}</td><td style="text-align:right">₹${amt.toLocaleString('en-IN')}</td></tr>`;
             });
             pieChart.data.labels = Object.keys(pieData);
             pieChart.data.datasets[0].data = Object.values(pieData);
@@ -242,11 +278,11 @@
         });
 
         [...filtered].reverse().forEach(item => {
-            tbody.innerHTML += `<tr><td>${item.date}</td><td><span class="badge" style="background:#f1f5f9">${item.billNo || '-'}</span></td><td>${item.customer}</td>${currentUser === 'admin' ? `<td><span class="badge">${item.salesman}</span></td>` : ''}<td>₹${item.amount.toLocaleString('en-IN')}</td><td>${currentUser === 'admin' ? `<button onclick="deleteEntry('${item.fireId}')" style="border:none; background:none; cursor:pointer;">🗑️</button>` : ''}</td></tr>`;
+            tbody.innerHTML += `<tr><td>${item.date}</td><td><span class="badge">${item.billNo}</span></td><td>${item.customer}</td>${currentUser === 'admin' ? `<td>${item.salesman}</td>` : ''}<td>₹${item.amount.toLocaleString('en-IN')}</td><td>${currentUser === 'admin' ? `<button onclick="deleteEntry('${item.fireId}')" style="border:none; background:none;">🗑️</button>` : ''}</td></tr>`;
         });
 
         document.getElementById('totalVal').innerText = `₹${displayTotal.toLocaleString('en-IN')}`;
-        document.getElementById('gapVal').innerText = `₹${Math.max(0, activeTarget - displayTotal).toLocaleString('en-IN')}`;
+        document.getElementById('gapVal').innerText = `₹${Math.max(0, target - displayTotal).toLocaleString('en-IN')}`;
         lineChart.data.labels = Object.keys(lineData); lineChart.data.datasets[0].data = Object.values(lineData); lineChart.update();
     }
 
@@ -260,15 +296,9 @@
         ['billNo', 'customer', 'amount'].forEach(id => document.getElementById(id).value = '');
     }
 
-    function deleteEntry(fireId) {
-        if(currentUser === 'admin' && confirm("Delete record?")) db.ref('sales/' + fireId).remove();
-    }
-
-    function clearAllData() {
-        const pass = prompt("Enter Secret Password:");
-        if(pass === "1996") { if(confirm("Delete ALL history?")) db.ref('sales').remove(); }
-    }
-
+    function deleteEntry(id) { if(confirm("Delete?")) db.ref('sales/'+id).remove(); }
+    function clearAllData() { if(prompt("Pass:") === "1996" && confirm("Clear ALL?")) db.ref('sales').remove(); }
+    
     function initCharts() {
         if(lineChart) lineChart.destroy();
         lineChart = new Chart(document.getElementById('lineChart'), {
