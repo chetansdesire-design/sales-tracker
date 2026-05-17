@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Pro Sales Tracker v2.5.1</title>
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root { --primary: #0f172a; --accent: #3b82f6; --success: #10b981; --danger: #f43f5e; --admin: #8b5cf6; --bg: #f8fafc; --warn: #f59e0b; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); margin: 0; padding: 10px; -webkit-tap-highlight-color: transparent; }
+        .container { max-width: 1100px; margin: auto; display: none; }
+        #loginOverlay { position: fixed; inset: 0; background: var(--primary); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+        .login-card { background: white; padding: 30px; border-radius: 20px; width: 90%; max-width: 380px; text-align: center; }
+        .login-card input, .settings-panel input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #e2e8f0; border-radius: 10px; box-sizing: border-box; font-size: 16px; }
+        .btn-login { width: 100%; padding: 14px; background: var(--accent); color: white; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; transition: opacity 0.2s; }
+        .btn-login:hover { opacity: 0.9; }
+        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding: 10px 0; }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 10px; margin-bottom: 15px; }
+        .stat-card { background: white; padding: 15px; border-radius: 15px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .stat-card h3 { font-size: 11px; color: #64748b; margin: 0; text-transform: uppercase; }
+        .stat-card p { font-size: 17px; font-weight: 800; margin: 5px 0 0; }
+        .filter-section { margin-bottom: 15px; background: white; padding: 10px; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.03); display: flex; gap: 15px; }
+        .filter-box { flex: 1; }
+        select { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0; font-size: 14px; font-weight: 600; color: var(--primary); }
+        .progress-container { background: white; padding: 15px; border-radius: 15px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .progress-bar-bg { width: 100%; background: #e2e8f0; height: 10px; border-radius: 10px; overflow: hidden; margin-top: 8px; }
+        #progressBar { width: 0%; height: 100%; background: linear-gradient(90deg, var(--accent), var(--success)); transition: width 0.6s ease; }
+        
+        .chart-grid { display: grid; grid-template-columns: 1fr; gap: 15px; margin-bottom: 15px; }
+        @media (min-width: 768px) { .chart-grid.admin-mode { grid-template-columns: 1fr 1fr; } .chart-grid.split { grid-template-columns: 1fr 1fr; } }
+        .chart-box { background: white; padding: 15px; border-radius: 15px; height: 260px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        
+        .form-panel { background: var(--primary); color: white; padding: 20px; border-radius: 15px; margin-bottom: 20px; }
+        .form-grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
+        @media (min-width: 768px) { .form-grid { grid-template-columns: repeat(6, 1fr); } }
+        input { padding: 12px; border-radius: 8px; border: 1px solid #334155; font-size: 16px; }
+        .btn-add { background: var(--success); color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        .btn-danger { background: var(--danger); color: white; border: none; padding: 8px 15px; border-radius: 8px; font-size: 12px; cursor: pointer; }
+        .btn-action { background: var(--primary); color: white; border: none; padding: 8px 12px; border-radius: 8px; font-size: 11px; cursor: pointer; }
+        
+        .table-wrap { background: white; border-radius: 15px; overflow-x: auto; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        table { width: 100%; border-collapse: collapse; min-width: 650px; }
+        th { background: #f1f5f9; padding: 12px; text-align: left; font-size: 11px; color: #64748b; }
+        td { padding: 12px; border-top: 1px solid #f1f5f9; font-size: 13px; }
+        
+        .badge { padding: 4px 8px; border-radius: 6px; font-size: 10px; font-weight: 700; }
+        .badge-bill { background: #e2e8f0; color: #475569; }
+        .badge-completed { background: #d1fae5; color: #065f46; }
+        .badge-returned { background: #fee2e2; color: #991b1b; }
+        .badge-cancelled { background: #f3f4f6; color: #374151; }
+
+        .settings-panel { display:none; background: white; padding: 20px; border-radius: 15px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .version-tag { font-size: 10px; color: #94a3b8; text-align: center; margin-top: 20px; }
+        .admin-manage-grid { display: grid; grid-template-columns: 1fr; gap: 20px; margin-top: 15px; border-top: 1px dashed #e2e8f0; padding-top: 15px; }
+        @media (min-width: 768px) { .admin-manage-grid { grid-template-columns: 1fr 1fr; } }
+        .salesman-list-item { display: flex; justify-content: space-between; align-items: center; padding: 8px; background: #f8fafc; border-radius: 8px; margin-bottom: 6px; font-weight: 600; text-transform: capitalize; }
+        
+        /* --- PDF & PRINT A4 ENGINE (Fully Fixed for Visibility) --- */
+        #printHeader { display: none; }
+        @media print {
+            @page { size: A4 portrait; margin: 15mm; }
+            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
+            body { background: white !important; margin: 0; padding: 0; }
+            
+            /* Hide UI Elements completely */
+            header button, #settingsPanel, .filter-section, .form-panel, .btn-action, .btn-danger, #loginOverlay, .delete-btn { display: none !important; }
+            
+            /* Show custom print header */
+            #printHeader { display: block !important; text-align: center; margin-bottom: 20px; font-family: sans-serif; }
+            #printHeader h1 { margin: 0; font-size: 24px; color: var(--primary); }
+            #printHeader p { margin: 5px 0 0 0; color: #64748b; font-size: 14px; }
+            
+            /* Force Containers to Expand fully without scrolling */
+            .container, #mainApp, .table-wrap { 
+                display: block !important; 
+                width: 100% !important; 
+                max-width: 100% !important; 
+                margin: 0 !important; 
+                overflow: visible !important; /* Critical fix for hidden table data */
+                box-shadow: none !important; 
+            }
+            
+            .chart-box { page-break-inside: avoid; border: 1px solid #e2e8f0; box-shadow: none !important; }
+            table { width: 100% !important; page-break-inside: auto; border: 1px solid #e2e8f0; }
+            tr { page-break-inside: avoid; page-break-after: auto; }
+            td, th { page-break-inside: avoid; border-bottom: 1px solid #e2e8f0; }
+        }
+    </style>
+</head>
+<body>
+
+<div id="loginOverlay">
+    <div class="login-card">
+        <h2 style="margin:0 0 20px 0;">Team Sales Portal</h2>
+        <input type="text" id="loginUser" placeholder="Username">
+        <input type="password" id="loginPass" placeholder="Password">
+        <button class="btn-login" onclick="handleLogin()">Sign In</button>
+    </div>
+</div>
+
+<div class="container" id="mainApp">
+    
+    <div id="printHeader">
+        <h1>Monthly Sales Report</h1>
+        <p id="printSubheader">Generated Report</p>
+    </div>
+
+    <header>
+        <div><h2 id="welcomeName" style="margin:0;">Hi</h2><span id="roleBadge" class="badge badge-bill">Sales Team</span></div>
+        <div style="display:flex; gap:15px; align-items:center;">
+            <button onclick="toggleSettings()" style="cursor:pointer; border:none; background:none; font-size: 20px;" title="Settings">⚙️</button>
+            <button onclick="handleLogout()" style="cursor:pointer; border:none; background:none; color:var(--danger); font-weight:bold;">Logout</button>
+        </div>
+    </header>
+
+    <div id="settingsPanel" class="settings-panel">
+        <h3 style="margin-top:0; font-size: 16px;">Account Settings</h3>
+        <div style="position: relative; max-width: 320px;">
+            <input type="password" id="newPass" placeholder="Enter New Password">
+            <span onclick="togglePassView()" id="eyeIcon" style="position: absolute; right: 10px; top: 22px; cursor: pointer;">👁️</span>
+            <button class="btn-login" onclick="updatePassword()" style="margin-top: 10px; padding: 10px;">Update Password</button>
+        </div>
+
+        <div id="adminManagementSection" style="display: none;" class="admin-manage-grid">
+            <div>
+                <h4 style="margin: 0 0 10px 0; color: var(--admin);">➕ Add New Salesman</h4>
+                <input type="text" id="newSalesmanUser" placeholder="Username (lowercase)">
+                <input type="password" id="newSalesmanPass" placeholder="Password">
+                <button class="btn-login" onclick="addSalesman()" style="background: var(--admin); padding: 10px; margin-top: 5px;">Register User</button>
+            </div>
+            <div>
+                <h4 style="margin: 0 0 10px 0; color: var(--danger);">👥 Manage Sales Team</h4>
+                <div id="salesmenListContainer" style="max-height: 180px; overflow-y: auto; border: 1px solid #e2e8f0; padding: 10px; border-radius: 10px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="filter-section">
+        <div class="filter-box">
+            <label style="font-size: 10px; color: #64748b; font-weight: 800; display:block; margin-bottom:5px;">MONTH</label>
+            <select id="monthFilter" onchange="runUpdateUI()"></select>
+        </div>
+        <div class="filter-box" id="adminUserFilterBox" style="display: none;">
+            <label style="font-size: 10px; color: #64748b; font-weight: 800; display:block; margin-bottom:5px;">SALESMAN FILTER</label>
+            <select id="salesmanFilter" onchange="runUpdateUI()">
+                <option value="all">📊 All Team Data</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-card"><h3>Target</h3><p id="targetValText">₹10L</p></div>
+        <div class="stat-card"><h3><span id="statTitle">Achieved</span></h3><p id="totalVal" style="color: var(--success);">₹0</p></div>
+        <div class="stat-card"><h3>Gap</h3><p id="gapVal" style="color: var(--danger);">₹10L</p></div>
+    </div>
+
+    <div class="progress-container">
+        <div style="display:flex; justify-content:space-between; font-size:12px; font-weight:bold; color:#475569;">
+            <span id="progLabel">Target Progress</span>
+            <span id="progressPercent">0%</span>
+        </div>
+        <div class="progress-bar-bg"><div id="progressBar"></div></div>
+    </div>
+
+    <!-- MAIN CHARTS (Timeline & Admin Pie) -->
+    <div class="chart-grid" id="chartGrid">
+        <div class="chart-box"><canvas id="lineChart"></canvas></div>
+        <div class="chart-box" id="pieBox" style="display:none;"><canvas id="pieChart"></canvas></div>
+    </div>
+
+    <!-- INDIVIDUAL RATIO CHARTS (Returns & Bills) -->
+    <div class="chart-grid split" id="individualChartGrid" style="display:none;">
+        <div class="chart-box" style="height: 220px;">
+            <h4 style="margin:0 0 5px 0; font-size:12px; text-align:center; color:#64748b;">💰 Revenue: Return Ratio</h4>
+            <div style="height: 180px;"><canvas id="returnPieChart"></canvas></div>
+        </div>
+        <div class="chart-box" style="height: 220px;">
+            <h4 style="margin:0 0 5px 0; font-size:12px; text-align:center; color:#64748b;">📄 Bills: Status Ratio</h4>
+            <div style="height: 180px;"><canvas id="billPieChart"></canvas></div>
+        </div>
+    </div>
+
+    <div id="adminSection" style="display:none;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+            <h3 style="font-size: 15px; margin:0;">🏆 Monthly Leaderboard</h3>
+            <div style="display:flex; gap:5px;">
+                <button onclick="triggerPrint()" class="btn-action" style="background:#475569;">📄 PDF / Print</button>
+                <button onclick="exportToCSV()" class="btn-action">📥 CSV</button>
+                <button class="btn-danger" onclick="clearAllData()">🗑️ Reset</button>
+            </div>
+        </div>
+        <div class="table-wrap">
+            <table>
+                <thead><tr><th>Rank</th><th>Salesman</th><th style="text-align:right">Monthly Rev (Completed)</th></tr></thead>
+                <tbody id="leaderboardBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="form-panel" id="inputPanel">
+        <div class="form-grid">
+            <input type="date" id="date">
+            <input type="text" id="billNo" placeholder="Bill No">
+            <input type="text" id="customer" placeholder="Customer Name">
+            <select id="status" style="border: 1px solid #334155; padding: 12px; border-radius: 8px;">
+                <option value="Completed">✅ Completed</option>
+                <option value="Returned">🔄 Returned</option>
+                <option value="Cancelled">❌ Cancelled</option>
+            </select>
+            <input type="number" id="amount" placeholder="Amount ₹">
+            <button class="btn-add" onclick="addEntry()">Submit</button>
+        </div>
+    </div>
+
+    <h3 style="font-size: 15px; margin: 10px 5px;">Transaction History</h3>
+    <div class="table-wrap">
+        <table id="salesTable">
+            <thead>
+                <tr>
+                    <th>Date</th><th>Bill No</th><th>Status</th><th>Customer</th>
+                    <th id="thUser" style="display:none;">Salesman</th>
+                    <th>Amount</th><th class="delete-btn"></th>
+                </tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+        </table>
+    </div>
+    <div class="version-tag">Version 2.5.1 | Print Fix & Line Chart Retained</div>
+</div>
+
+<script>
+    const INDIVIDUAL_TARGET = 1000000; 
+    const firebaseConfig = {
+        apiKey: "AIzaSyCkciiLP3SIrK1yNNqhs1JtlCc_c55YOOY",
+        authDomain: "sales-tracker-27660.app",
+        databaseURL: "https://sales-tracker-27660-default-rtdb.firebaseio.com/",
+        projectId: "sales-tracker-27660",
+        appId: "1:960783153617:web:9b9fa521836b9f5ef488f0"
+    };
+
+    const USERS_DEFAULT = { 
+        "arun": { password: "arun123" }, "adarsh": { password: "adarsh123" }, 
+        "javid": { password: "javid123" }, "other": { password: "other123" }, "admin": { password: "admin789" } 
+    };
+
+    const CHART_COLORS = ['#3b82f6', '#10b981', '#f43f5e', '#8b5cf6', '#f59e0b', '#06b6d4', '#ec4899', '#84cc16'];
+    const STATUS_COLORS = ['#10b981', '#ef4444', '#64748b']; // Green, Red, Grey
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    let currentUser = localStorage.getItem('activeUser');
+    let allSales = [];
+    let registeredSalesmen = []; 
+    let lineChart, pieChart, returnPieChart, billPieChart;
+
+    window.onload = () => {
+        initDatabaseSync();
+        if(currentUser) showApp(); 
+    };
+
+    document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === 'hidden' && currentUser) handleLogout();
+    });
+
+    function initDatabaseSync() {
+        db.ref('userConfigs').once('value', (snapshot) => {
+            let data = snapshot.val() || {};
+            let updates = {}; let missingUser = false;
+            Object.keys(USERS_DEFAULT).forEach(key => {
+                if (!data[key]) { updates[key] = USERS_DEFAULT[key]; missingUser = true; }
+            });
+            if (missingUser) db.ref('userConfigs').update(updates);
+        });
+
+        db.ref('userConfigs').on('value', (snapshot) => {
+            const data = snapshot.val() || {};
+            const activeData = Object.keys(data).length > 0 ? data : USERS_DEFAULT;
+            registeredSalesmen = Object.keys(activeData).filter(user => user !== 'admin');
+            
+            if(currentUser === 'admin') {
+                renderSalesmenManagementList();
+                populateAdminSalesmanFilter();
+            }
+            if(currentUser) runUpdateUI();
+        });
+    }
+
+    async function handleLogin() {
+        const u = document.getElementById('loginUser').value.toLowerCase().trim();
+        const p = document.getElementById('loginPass').value;
+        const snapshot = await db.ref(`userConfigs/${u}`).once('value');
+        const userData = snapshot.val();
+        const dbPassword = (userData && typeof userData === 'object') ? userData.password : userData;
+        
+        if(dbPassword && dbPassword === p) {
+            currentUser = u;
+            localStorage.setItem('activeUser', u);
+            showApp();
+        } else { alert("Invalid Credentials"); }
+    }
+
+    function showApp() {
+        document.getElementById('loginOverlay').style.display = 'none';
+        document.getElementById('mainApp').style.display = 'block';
+        document.getElementById('welcomeName').innerText = `Hi, ${currentUser}`;
+        
+        const localDate = new Date(); localDate.setMinutes(localDate.getMinutes() - localDate.getTimezoneOffset());
+        document.getElementById('date').value = localDate.toISOString().slice(0,10);
+        
+        if(currentUser === 'admin') {
+            document.getElementById('inputPanel').style.display = 'none';
+            document.getElementById('thUser').style.display = 'table-cell';
+            document.getElementById('roleBadge').innerText = "Administrator";
+            document.getElementById('roleBadge').style.background = "var(--admin)";
+            document.getElementById('roleBadge').style.color = "white";
+            document.getElementById('pieBox').style.display = 'block';
+            document.getElementById('adminSection').style.display = 'block';
+            document.getElementById('adminManagementSection').style.display = 'grid';
+            document.getElementById('adminUserFilterBox').style.display = 'block';
+            document.getElementById('chartGrid').classList.add('admin-mode');
+            renderSalesmenManagementList(); populateAdminSalesmanFilter();
+        }
+        
+        initCharts();
+        db.ref('sales').on('value', (snapshot) => {
+            const data = snapshot.val();
+            allSales = data ? Object.entries(data).map(([key, val]) => ({...val, fireId: key})) : [];
+            updateMonthDropdown(); runUpdateUI();
+        });
+    }
+
+    function populateAdminSalesmanFilter() {
+        const select = document.getElementById('salesmanFilter');
+        if(!select) return;
+        const currentValue = select.value;
+        let html = `<option value="all">📊 All Team Data</option>`;
+        registeredSalesmen.forEach(s => html += `<option value="${s}">👤 ${s.toUpperCase()}</option>`);
+        select.innerHTML = html; select.value = currentValue || 'all';
+    }
+
+    function renderSalesmenManagementList() {
+        const listContainer = document.getElementById('salesmenListContainer');
+        if(!listContainer) return;
+        listContainer.innerHTML = '';
+        registeredSalesmen.forEach(user => {
+            listContainer.innerHTML += `<div class="salesman-list-item"><span>👤 ${user}</span><button class="btn-danger" style="padding: 4px 8px;" onclick="deleteSalesman('${user}')">🗑️</button></div>`;
+        });
+    }
+
+    function updateMonthDropdown() {
+        const filter = document.getElementById('monthFilter');
+        const currentMonth = new Date().toISOString().slice(0, 7);
+        const monthsInDB = [...new Set(allSales.map(s => s.date.slice(0, 7)))];
+        if (!monthsInDB.includes(currentMonth)) monthsInDB.push(currentMonth);
+        monthsInDB.sort().reverse();
+        const savedValue = filter.value;
+        filter.innerHTML = monthsInDB.map(m => `<option value="${m}">${new Date(m + "-01").toLocaleString('default', { month: 'long', year: 'numeric' })}</option>`).join('');
+        filter.value = (savedValue && monthsInDB.includes(savedValue)) ? savedValue : currentMonth;
+    }
+
+    function formatINR(number) { return number.toLocaleString('en-IN', { maximumFractionDigits: 0 }); }
+
+    function runUpdateUI() {
+        const selectedMonth = document.getElementById('monthFilter').value;
+        const selectedUserFilter = document.getElementById('salesmanFilter') ? document.getElementById('salesmanFilter').value : 'all';
+        
+        const isAdmin = (currentUser === 'admin');
+        const isViewingAll = isAdmin && (selectedUserFilter === 'all');
+        const targetScopeUser = isAdmin ? selectedUserFilter : currentUser;
+        
+        const salesTeamCount = Math.max(registeredSalesmen.length, 1); 
+        const target = isViewingAll ? (INDIVIDUAL_TARGET * salesTeamCount) : INDIVIDUAL_TARGET;
+        document.getElementById('targetValText').innerText = `₹${(target/100000).toFixed(0)}L`;
+        
+        const tbody = document.getElementById('tableBody');
+        const leaderBody = document.getElementById('leaderboardBody');
+        if(tbody) tbody.innerHTML = ''; if(leaderBody) leaderBody.innerHTML = '';
+        
+        let teamTotal = 0, pieData = {}, lineData = {};
+        let completedAmt = 0, returnedAmt = 0;
+        let completedCount = 0, returnedCount = 0, cancelledCount = 0;
+
+        const monthlyData = allSales.filter(item => item.date.startsWith(selectedMonth));
+        registeredSalesmen.forEach(name => pieData[name] = 0);
+
+        monthlyData.forEach(item => {
+            const status = item.status || 'Completed'; 
+            
+            if(status === 'Completed') {
+                teamTotal += item.amount;
+                pieData[item.salesman] = (pieData[item.salesman] || 0) + item.amount;
+            }
+
+            if(!isViewingAll && item.salesman === targetScopeUser) {
+                if(status === 'Completed') { completedAmt += item.amount; completedCount++; }
+                if(status === 'Returned') { returnedAmt += item.amount; returnedCount++; }
+                if(status === 'Cancelled') { cancelledCount++; }
+            }
+        });
+
+        const displayTotal = isViewingAll ? teamTotal : (pieData[targetScopeUser] || 0);
+        const progPerc = Math.min(100, (displayTotal / target) * 100).toFixed(1);
+        
+        document.getElementById('progressBar').style.width = progPerc + '%';
+        document.getElementById('progressPercent').innerText = progPerc + '%';
+        document.getElementById('statTitle').innerText = isViewingAll ? "Team Total" : "Completed";
+        document.getElementById('printSubheader').innerText = `${document.getElementById('monthFilter').options[document.getElementById('monthFilter').selectedIndex].text} | ${isViewingAll ? "All Team Overview" : `Salesman: ${targetScopeUser.toUpperCase()}`}`;
+
+        if(isAdmin && pieChart) {
+            if(isViewingAll) {
+                document.getElementById('pieBox').style.display = 'block';
+                Object.entries(pieData).sort((a,b) => b[1] - a[1]).forEach(([name, amt], i) => {
+                    if(leaderBody) leaderBody.innerHTML += `<tr><td>${i+1}</td><td style="text-transform:capitalize">${name}</td><td style="text-align:right">₹${formatINR(amt)}</td></tr>`;
+                });
+                
+                // Safely assign colors even if more than 8 salesmen exist
+                const colorCount = Object.keys(pieData).length;
+                const safeColors = Array.from({length: colorCount}, (_, i) => CHART_COLORS[i % CHART_COLORS.length]);
+                
+                pieChart.data.labels = Object.keys(pieData);
+                pieChart.data.datasets[0].data = Object.values(pieData);
+                pieChart.data.datasets[0].backgroundColor = safeColors;
+                pieChart.update();
+            } else { document.getElementById('pieBox').style.display = 'none'; }
+        }
+
+        const isIndividualView = !isViewingAll || !isAdmin;
+        document.getElementById('individualChartGrid').style.display = isIndividualView ? 'grid' : 'none';
+        
+        if(isIndividualView && returnPieChart && billPieChart) {
+            returnPieChart.data.datasets[0].data = [completedAmt, returnedAmt];
+            returnPieChart.update();
+            billPieChart.data.datasets[0].data = [completedCount, returnedCount, cancelledCount];
+            billPieChart.update();
+        }
+
+        const filtered = isViewingAll ? monthlyData : monthlyData.filter(s => s.salesman === targetScopeUser);
+        
+        filtered.sort((a,b) => new Date(a.date) - new Date(b.date)).forEach(item => {
+            const st = item.status || 'Completed';
+            if(st === 'Completed') { lineData[item.date] = (lineData[item.date] || 0) + item.amount; }
+        });
+
+        if(tbody) {
+            [...filtered].reverse().forEach(item => {
+                const st = item.status || 'Completed';
+                const badgeClass = st === 'Completed' ? 'badge-completed' : (st === 'Returned' ? 'badge-returned' : 'badge-cancelled');
+                
+                tbody.innerHTML += `<tr>
+                    <td>${item.date}</td>
+                    <td><span class="badge badge-bill">${item.billNo}</span></td>
+                    <td><span class="badge ${badgeClass}">${st}</span></td>
+                    <td>${item.customer}</td>
+                    ${isAdmin ? `<td style="text-transform:capitalize">${item.salesman}</td>` : ''}
+                    <td style="${st !== 'Completed' ? 'text-decoration:line-through; color:#94a3b8;' : ''}">₹${formatINR(item.amount)}</td>
+                    <td class="delete-btn">${isAdmin ? `<button onclick="deleteEntry('${item.fireId}')" style="border:none; background:none; cursor:pointer;" title="Delete Record">🗑️</button>` : ''}</td>
+                </tr>`;
+            });
+        }
+
+        document.getElementById('totalVal').innerText = `₹${formatINR(displayTotal)}`;
+        document.getElementById('gapVal').innerText = `₹${formatINR(Math.max(0, target - displayTotal))}`;
+        
+        if(lineChart) {
+            lineChart.data.labels = Object.keys(lineData); 
+            lineChart.data.datasets[0].data = Object.values(lineData); 
+            lineChart.update();
+        }
+    }
+
+    // Give charts time to render before opening print dialog
+    function triggerPrint() {
+        setTimeout(() => { window.print(); }, 300);
+    }
+
+    function addSalesman() {
+        const newUser = document.getElementById('newSalesmanUser').value.toLowerCase().trim();
+        const newPass = document.getElementById('newSalesmanPass').value.trim();
+        if(!newUser || !newPass) return alert("Fill in all salesman fields!");
+        if(newUser === 'admin') return alert("Cannot overwrite system administrator account.");
+        db.ref(`userConfigs/${newUser}`).set({ password: newPass }).then(() => {
+            alert(`User "${newUser}" registered!`);
+            document.getElementById('newSalesmanUser').value = ''; document.getElementById('newSalesmanPass').value = '';
+        });
+    }
+
+    function deleteSalesman(username) { if(confirm(`Completely delete salesman "${username}"?`)) db.ref(`userConfigs/${username}`).remove(); }
+    function toggleSettings() { const p = document.getElementById('settingsPanel'); p.style.display = p.style.display === 'block' ? 'none' : 'block'; }
+    function togglePassView() {
+        const inp = document.getElementById('newPass'); const eye = document.getElementById('eyeIcon');
+        inp.type = inp.type === 'password' ? 'text' : 'password'; eye.innerText = inp.type === 'password' ? '👁️' : '🔒';
+    }
+    
+    function updatePassword() {
+        const newP = document.getElementById('newPass').value;
+        if(newP.length < 4) return alert("Password too short!");
+        db.ref(`userConfigs/${currentUser}`).set({ password: newP }).then(() => {
+            alert("Password updated!"); toggleSettings(); document.getElementById('newPass').value = '';
+        });
+    }
+
+    function exportToCSV() {
+        const month = document.getElementById('monthFilter').value;
+        const selectedUserFilter = document.getElementById('salesmanFilter') ? document.getElementById('salesmanFilter').value : 'all';
+        const targetScopeUser = (currentUser === 'admin' && selectedUserFilter !== 'all') ? selectedUserFilter : null;
+        
+        let filtered = allSales.filter(s => s.date.startsWith(month));
+        if (targetScopeUser) filtered = filtered.filter(s => s.salesman === targetScopeUser);
+
+        let csv = "Date,Bill,Status,Customer,Salesman,Amount\n";
+        filtered.forEach(s => {
+            const safeCustomer = (s.customer || '').replace(/"/g, '""');
+            const status = s.status || 'Completed';
+            csv += `${s.date},${s.billNo},${status},"${safeCustomer}",${s.salesman},${s.amount}\n`;
+        });
+        
+        const blob = new Blob([csv], {type: 'text/csv'});
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = targetScopeUser ? `Sales_${targetScopeUser}_${month}.csv` : `Sales_Team_${month}.csv`; a.click();
+    }
+
+    function addEntry() {
+        const amount = parseFloat(document.getElementById('amount').value);
+        const bill = document.getElementById('billNo').value || '-';
+        const customer = document.getElementById('customer').value;
+        const status = document.getElementById('status').value;
+        const date = document.getElementById('date').value;
+        
+        if(!customer || isNaN(amount) || !date) return alert("Fill all fields");
+        db.ref('sales').push({ salesman: currentUser, date: date, billNo: bill, customer: customer, status: status, amount: amount, timestamp: Date.now() });
+        ['billNo', 'customer', 'amount'].forEach(id => document.getElementById(id).value = '');
+    }
+
+    function deleteEntry(id) { if(confirm("Delete this specific sale?")) db.ref('sales/'+id).remove(); }
+    
+    async function clearAllData() { 
+        const enteredPass = prompt("WARNING: This will delete ALL sales.\nEnter Admin password:");
+        if(!enteredPass) return;
+        
+        const snapshot = await db.ref(`userConfigs/${currentUser}`).once('value');
+        const dbPassword = snapshot.val()?.password || snapshot.val();
+
+        if (dbPassword === enteredPass) {
+            if(confirm("FINAL CONFIRMATION: Are you absolutely sure?")) db.ref('sales').remove().then(() => alert("Database wiped clean."));
+        } else { alert("Incorrect Password."); }
+    }
+    
+    function initCharts() {
+        if(lineChart) lineChart.destroy();
+        lineChart = new Chart(document.getElementById('lineChart'), {
+            type: 'line', data: { labels: [], datasets: [{ label: 'Sales (Completed)', data: [], borderColor: '#3b82f6', tension: 0.3, fill: true, backgroundColor: 'rgba(59, 130, 246, 0.1)' }] },
+            options: { maintainAspectRatio: false, plugins: { legend: { display: false } } }
+        });
+        
+        if(currentUser === 'admin' && !pieChart) {
+            pieChart = new Chart(document.getElementById('pieChart'), { type: 'pie', data: { labels: [], datasets: [{ data: [], backgroundColor: [] }] }, options: { maintainAspectRatio: false } });
+        }
+
+        if(!returnPieChart) {
+            returnPieChart = new Chart(document.getElementById('returnPieChart'), {
+                type: 'doughnut', data: { labels: ['Completed ₹', 'Returned ₹'], datasets: [{ data: [0,0], backgroundColor: ['#10b981', '#ef4444'] }] },
+                options: { maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 12 } } } }
+            });
+        }
+        if(!billPieChart) {
+            billPieChart = new Chart(document.getElementById('billPieChart'), {
+                type: 'doughnut', data: { labels: ['Completed', 'Returned', 'Cancelled'], datasets: [{ data: [0,0,0], backgroundColor: STATUS_COLORS }] },
+                options: { maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 12 } } } }
+            });
+        }
+    }
+
+    function handleLogout() { localStorage.removeItem('activeUser'); location.reload(); }
+</script>
+</body>
+</html>
