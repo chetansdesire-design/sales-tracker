@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Pro Sales Tracker v2.7.0</title>
+    <title>Pro Sales Tracker v3.2.0</title>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -33,15 +33,16 @@
         .chart-box { background: white; padding: 15px; border-radius: 15px; height: 260px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
         
         .form-panel { background: var(--primary); color: white; padding: 20px; border-radius: 15px; margin-bottom: 20px; }
-        .form-grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
-        @media (min-width: 768px) { .form-grid { grid-template-columns: repeat(6, 1fr); } }
-        input { padding: 12px; border-radius: 8px; border: 1px solid #334155; font-size: 16px; }
-        .btn-add { background: var(--success); color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        .form-header { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin-bottom: 15px; border-bottom: 1px dashed #334155; padding-bottom: 15px; }
+        .product-row { display: flex; gap: 10px; margin-bottom: 10px; }
+        input { padding: 12px; border-radius: 8px; border: 1px solid #334155; font-size: 16px; width: 100%; box-sizing: border-box; }
+        select { padding: 12px; border-radius: 8px; border: 1px solid #334155; font-size: 16px; width: 100%; box-sizing: border-box; }
+        .btn-add { background: var(--success); color: white; border: none; padding: 14px; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%; font-size: 15px; }
         .btn-danger { background: var(--danger); color: white; border: none; padding: 8px 15px; border-radius: 8px; font-size: 12px; cursor: pointer; }
-        .btn-action { background: var(--primary); color: white; border: none; padding: 8px 12px; border-radius: 8px; font-size: 11px; cursor: pointer; }
+        .btn-action { background: var(--accent); color: white; border: none; padding: 8px 15px; border-radius: 8px; font-size: 12px; cursor: pointer; }
         
         .table-wrap { background: white; border-radius: 15px; overflow-x: auto; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 20px; }
-        table { width: 100%; border-collapse: collapse; min-width: 650px; }
+        table { width: 100%; border-collapse: collapse; min-width: 750px; }
         th { background: #f1f5f9; padding: 12px; text-align: left; font-size: 11px; color: #64748b; }
         td { padding: 12px; border-top: 1px solid #f1f5f9; font-size: 13px; }
         
@@ -63,18 +64,11 @@
             @page { size: A4 portrait; margin: 15mm; }
             * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
             body { background: white !important; margin: 0; padding: 0; }
-            
-            header button, #settingsPanel, .filter-section, .form-panel, .btn-action, .btn-danger, #loginOverlay, .delete-btn { display: none !important; }
-            
+            header button, #settingsPanel, .filter-section, .form-panel, .btn-action, .btn-danger, #loginOverlay, .delete-btn, .no-print { display: none !important; }
             #printHeader { display: block !important; text-align: center; margin-bottom: 20px; font-family: sans-serif; }
             #printHeader h1 { margin: 0; font-size: 24px; color: var(--primary); }
             #printHeader p { margin: 5px 0 0 0; color: #64748b; font-size: 14px; }
-            
-            .container, #mainApp, .table-wrap { 
-                display: block !important; width: 100% !important; max-width: 100% !important; 
-                margin: 0 !important; overflow: visible !important; box-shadow: none !important; 
-            }
-            
+            .container, #mainApp, .table-wrap { display: block !important; width: 100% !important; max-width: 100% !important; margin: 0 !important; overflow: visible !important; box-shadow: none !important; }
             .chart-box { page-break-inside: avoid; border: 1px solid #e2e8f0; box-shadow: none !important; }
             table { width: 100% !important; page-break-inside: auto; border: 1px solid #e2e8f0; }
             tr { page-break-inside: avoid; page-break-after: auto; }
@@ -136,7 +130,7 @@
             <select id="monthFilter" onchange="runUpdateUI()"></select>
         </div>
         <div class="filter-box" id="adminUserFilterBox" style="display: none;">
-            <label style="font-size: 10px; color: #64748b; font-weight: 800; display:block; margin-bottom:5px;">SALESMAN FILTER</label>
+            <label style="font-size: 10px; color: #64748b; font-weight: 800; display:block; margin-bottom:5px;">DASHBOARD FILTER</label>
             <select id="salesmanFilter" onchange="runUpdateUI()">
                 <option value="all">📊 All Team Data</option>
             </select>
@@ -175,12 +169,19 @@
         </div>
     </div>
 
-    <!-- NEW ANNUAL PERFORMANCE CHART -->
-    <div class="chart-box" id="annualChartBox" style="display:none; margin-bottom: 15px; height: 260px;">
-        <h4 id="annualChartTitle" style="margin:0 0 5px 0; font-size:12px; text-align:center; color:#64748b;">📅 Annual Performance</h4>
-        <div style="height: 220px;"><canvas id="annualChart"></canvas></div>
+    <!-- PERFORMANCE CHARTS (Annual & Product) -->
+    <div class="chart-grid split" id="performanceGrid" style="display:block; margin-bottom: 15px;">
+        <div class="chart-box" id="productChartBox" style="height: 260px;">
+            <h4 id="productChartTitle" style="margin:0 0 5px 0; font-size:12px; text-align:center; color:#64748b;">📦 Top Products</h4>
+            <div style="height: 220px;"><canvas id="productChart"></canvas></div>
+        </div>
+        <div class="chart-box" id="annualChartBox" style="display:none; height: 260px;">
+            <h4 id="annualChartTitle" style="margin:0 0 5px 0; font-size:12px; text-align:center; color:#64748b;">📅 Annual Performance</h4>
+            <div style="height: 220px;"><canvas id="annualChart"></canvas></div>
+        </div>
     </div>
 
+    <!-- ADMIN EXCLUSIVE REPORTS -->
     <div id="adminSection" style="display:none;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
             <h3 style="font-size: 15px; margin:0;">🏆 Monthly Leaderboard</h3>
@@ -198,7 +199,8 @@
         </div>
         
         <div id="detailedReportSection">
-            <h3 style="font-size: 15px; margin: 20px 0 10px 0;">📊 Salesman-wise Monthly Report</h3>
+            <!-- DETAILED SALESMAN REPORT -->
+            <h3 style="font-size: 15px; margin: 20px 0 10px 0;">👥 Salesman-wise Monthly Report</h3>
             <div class="table-wrap">
                 <table>
                     <thead>
@@ -216,19 +218,72 @@
         </div>
     </div>
 
-    <div class="form-panel" id="inputPanel">
-        <div class="form-grid">
-            <input type="date" id="date">
-            <input type="text" id="billNo" placeholder="Bill No">
-            <input type="text" id="customer" placeholder="Customer Name">
-            <select id="status" style="border: 1px solid #334155; padding: 12px; border-radius: 8px;">
-                <option value="Completed">✅ Completed</option>
-                <option value="Returned">🔄 Returned</option>
-                <option value="Cancelled">❌ Cancelled</option>
+    <!-- NEW UNIVERSAL PRODUCT REPORT MATRIX WITH OWN DROPDOWN -->
+    <div id="productReportSection" style="margin-top: 20px; margin-bottom: 20px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+            <h3 style="font-size: 15px; margin: 0;">📦 Detailed Product Breakdown</h3>
+            <select id="productReportSalesmanFilter" class="no-print" onchange="renderProductTable()" style="width: auto; padding: 6px 10px; border-radius: 8px; border: 1px solid #e2e8f0; font-size: 13px; font-weight: 600; color: var(--primary);">
+                <option value="all">📊 All Team Data</option>
             </select>
-            <input type="number" id="amount" placeholder="Amount ₹">
-            <button class="btn-add" onclick="addEntry()">Submit</button>
         </div>
+        <div class="table-wrap">
+            <table>
+                <thead id="productReportHead">
+                    <tr>
+                        <th id="thProdSalesman" style="display:none;">Salesman</th>
+                        <th>Product Name</th>
+                        <th>Completed Revenue (₹)</th>
+                        <th>Returned (₹)</th>
+                        <th>Net Revenue (₹)</th>
+                    </tr>
+                </thead>
+                <tbody id="productReportBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- MASTER-DETAIL FORM FOR MULTIPLE PRODUCTS PER BILL -->
+    <div class="form-panel" id="inputPanel">
+        <h4 style="margin: 0 0 15px 0;">📝 Enter Bill Details</h4>
+        
+        <div class="form-header">
+            <div id="adminSalesmanSelectContainer" style="display: none;">
+                <label style="font-size: 11px; font-weight: bold; margin-bottom: 3px; display: block; color: #cbd5e1;">Log Sale For:</label>
+                <select id="entrySalesman" style="border-color: var(--admin); color: var(--admin); font-weight: bold;"></select>
+            </div>
+            
+            <div>
+                <label style="font-size: 11px; font-weight: bold; margin-bottom: 3px; display: block;">Date</label>
+                <input type="date" id="date">
+            </div>
+            <div>
+                <label style="font-size: 11px; font-weight: bold; margin-bottom: 3px; display: block;">Bill No.</label>
+                <input type="text" id="billNo" placeholder="e.g. INV-1023">
+            </div>
+            <div>
+                <label style="font-size: 11px; font-weight: bold; margin-bottom: 3px; display: block;">Customer Name</label>
+                <input type="text" id="customer" placeholder="Enter Client Name">
+            </div>
+            <div>
+                <label style="font-size: 11px; font-weight: bold; margin-bottom: 3px; display: block;">Status</label>
+                <select id="status">
+                    <option value="Completed">✅ Completed</option>
+                    <option value="Returned">🔄 Returned</option>
+                    <option value="Cancelled">❌ Cancelled</option>
+                </select>
+            </div>
+        </div>
+
+        <h4 style="margin: 0 0 10px 0; font-size: 13px;">📦 Add Products to this Bill</h4>
+        <div id="productEntries">
+            <div class="product-row">
+                <input type="text" class="prod-name" placeholder="Product Name" style="flex:2;">
+                <input type="number" class="prod-amount" placeholder="Amount ₹" style="flex:1;">
+                <button class="btn-action" style="padding: 0 15px; font-size: 16px;" onclick="addProductRow(this)" title="Add another product">➕</button>
+            </div>
+        </div>
+
+        <button class="btn-add" style="margin-top: 10px;" onclick="addBillEntries()">Submit Full Bill</button>
     </div>
 
     <h3 style="font-size: 15px; margin: 10px 5px;">Transaction History</h3>
@@ -236,7 +291,7 @@
         <table id="salesTable">
             <thead>
                 <tr>
-                    <th>Date</th><th>Bill No</th><th>Status</th><th>Customer</th>
+                    <th>Date</th><th>Bill No</th><th>Product</th><th>Status</th><th>Customer</th>
                     <th id="thUser" style="display:none;">Salesman</th>
                     <th>Amount</th><th class="delete-btn"></th>
                 </tr>
@@ -244,7 +299,7 @@
             <tbody id="tableBody"></tbody>
         </table>
     </div>
-    <div class="version-tag">Version 2.7.0 | Added Annual Performance Chart</div>
+    <div class="version-tag">Version 3.2.0 | Dynamic Product-Salesman Filter Dropdown added</div>
 </div>
 
 <script>
@@ -270,8 +325,7 @@
     let currentUser = localStorage.getItem('activeUser');
     let allSales = [];
     let registeredSalesmen = []; 
-    // Added annualChart variable
-    let lineChart, pieChart, returnPieChart, billPieChart, annualChart;
+    let lineChart, pieChart, returnPieChart, billPieChart, annualChart, productChart;
 
     function escapeHTML(str) {
         if (!str) return '';
@@ -308,7 +362,7 @@
             
             if(currentUser === 'admin') {
                 renderSalesmenManagementList();
-                populateAdminSalesmanFilter();
+                populateAdminFilters();
             }
             if(currentUser) runUpdateUI();
         });
@@ -337,7 +391,6 @@
         document.getElementById('date').value = localDate.toISOString().slice(0,10);
         
         if(currentUser === 'admin') {
-            document.getElementById('inputPanel').style.display = 'none';
             document.getElementById('thUser').style.display = 'table-cell';
             document.getElementById('roleBadge').innerText = "Administrator";
             document.getElementById('roleBadge').style.background = "var(--admin)";
@@ -346,8 +399,18 @@
             document.getElementById('adminSection').style.display = 'block';
             document.getElementById('adminManagementSection').style.display = 'grid';
             document.getElementById('adminUserFilterBox').style.display = 'block';
+            document.getElementById('adminSalesmanSelectContainer').style.display = 'block'; 
             document.getElementById('chartGrid').classList.add('admin-mode');
-            renderSalesmenManagementList(); populateAdminSalesmanFilter();
+            renderSalesmenManagementList(); 
+            populateAdminFilters();
+        } else {
+            // Lock Product Filter to the active user if not admin
+            const prodSelect = document.getElementById('productReportSalesmanFilter');
+            if(prodSelect) {
+                prodSelect.innerHTML = `<option value="${currentUser}">👤 ${currentUser.toUpperCase()}</option>`;
+                prodSelect.value = currentUser;
+                prodSelect.disabled = true;
+            }
         }
         
         initCharts();
@@ -358,13 +421,34 @@
         });
     }
 
-    function populateAdminSalesmanFilter() {
+    function populateAdminFilters() {
+        // Global Dashboard Filter
         const select = document.getElementById('salesmanFilter');
-        if(!select) return;
-        const currentValue = select.value;
-        let html = `<option value="all">📊 All Team Data</option>`;
-        registeredSalesmen.forEach(s => html += `<option value="${s}">👤 ${s.toUpperCase()}</option>`);
-        select.innerHTML = html; select.value = currentValue || 'all';
+        if(select) {
+            const currentValue = select.value;
+            let html = `<option value="all">📊 All Team Data</option>`;
+            registeredSalesmen.forEach(s => html += `<option value="${s}">👤 ${s.toUpperCase()}</option>`);
+            select.innerHTML = html; select.value = currentValue || 'all';
+        }
+        
+        // Data Entry "Log As" Filter
+        const entrySelect = document.getElementById('entrySalesman');
+        if(entrySelect) {
+            const currentEntry = entrySelect.value;
+            let entryHtml = `<option value="admin">Log as: Admin</option>`;
+            registeredSalesmen.forEach(s => entryHtml += `<option value="${s}">Log as: ${s.toUpperCase()}</option>`);
+            entrySelect.innerHTML = entryHtml; entrySelect.value = currentEntry || 'admin';
+        }
+
+        // Local Product Table Filter
+        const prodSelect = document.getElementById('productReportSalesmanFilter');
+        if(prodSelect) {
+            const currentProd = prodSelect.value;
+            let prodHtml = `<option value="all">📊 All Team Breakdown</option>`;
+            registeredSalesmen.forEach(s => prodHtml += `<option value="${s}">👤 ${s.toUpperCase()}</option>`);
+            prodSelect.innerHTML = prodHtml; 
+            prodSelect.value = currentProd || 'all';
+        }
     }
 
     function renderSalesmenManagementList() {
@@ -389,6 +473,86 @@
 
     function formatINR(number) { return number.toLocaleString('en-IN', { maximumFractionDigits: 0 }); }
 
+    // --- NEW DECOUPLED PRODUCT TABLE RENDER FUNCTION ---
+    function renderProductTable() {
+        const selectedMonth = document.getElementById('monthFilter').value;
+        const pFilterSelect = document.getElementById('productReportSalesmanFilter');
+        if (!pFilterSelect) return;
+        
+        const pFilter = pFilterSelect.value; // 'all' or specific salesman string
+        const pBody = document.getElementById('productReportBody');
+        const pThSalesman = document.getElementById('thProdSalesman');
+        
+        if(!pBody) return;
+        pBody.innerHTML = '';
+        
+        const monthlyData = allSales.filter(item => item.date.startsWith(selectedMonth));
+        let salesmanProductStats = {};
+        
+        monthlyData.forEach(item => {
+            const status = item.status || 'Completed'; 
+            const sName = item.salesman || 'unknown';
+            const prod = item.product || 'N/A';
+
+            // Only tally if the record matches the current table filter
+            if (pFilter === 'all' || pFilter === sName) {
+                if (!salesmanProductStats[sName]) salesmanProductStats[sName] = {};
+                if (!salesmanProductStats[sName][prod]) salesmanProductStats[sName][prod] = { completed: 0, returned: 0 };
+                
+                if (status === 'Completed') salesmanProductStats[sName][prod].completed += item.amount;
+                if (status === 'Returned') salesmanProductStats[sName][prod].returned += item.amount;
+            }
+        });
+        
+        if (pFilter === 'all') {
+            // Show Salesman Column when viewing "all"
+            if(pThSalesman) pThSalesman.style.display = 'table-cell';
+            let allEntries = [];
+            
+            Object.keys(salesmanProductStats).forEach(s => {
+                Object.keys(salesmanProductStats[s]).forEach(p => {
+                    let st = salesmanProductStats[s][p];
+                    if(st.completed > 0 || st.returned > 0) {
+                        allEntries.push({ salesman: s, product: p, completed: st.completed, returned: st.returned, net: st.completed - st.returned });
+                    }
+                });
+            });
+            
+            // Sort by Salesman name alphabetically, then highest Net
+            allEntries.sort((a,b) => a.salesman.localeCompare(b.salesman) || b.net - a.net).forEach(row => {
+                pBody.innerHTML += `<tr>
+                    <td style="text-transform:capitalize;">${row.salesman}</td>
+                    <td><strong>${escapeHTML(row.product)}</strong></td>
+                    <td style="color:var(--success);">₹${formatINR(row.completed)}</td>
+                    <td style="color:var(--danger);">₹${formatINR(row.returned)}</td>
+                    <td style="font-weight:bold;">₹${formatINR(row.net)}</td>
+                </tr>`;
+            });
+        } else {
+            // Hide Salesman column when viewing a specific person
+            if(pThSalesman) pThSalesman.style.display = 'none';
+            let prods = salesmanProductStats[pFilter] || {};
+            let myEntries = [];
+            
+            Object.keys(prods).forEach(p => {
+                let st = prods[p];
+                if(st.completed > 0 || st.returned > 0) {
+                    myEntries.push({ product: p, completed: st.completed, returned: st.returned, net: st.completed - st.returned });
+                }
+            });
+            
+            // Sort by highest Net
+            myEntries.sort((a,b) => b.net - a.net).forEach(row => {
+                pBody.innerHTML += `<tr>
+                    <td><strong>${escapeHTML(row.product)}</strong></td>
+                    <td style="color:var(--success);">₹${formatINR(row.completed)}</td>
+                    <td style="color:var(--danger);">₹${formatINR(row.returned)}</td>
+                    <td style="font-weight:bold;">₹${formatINR(row.net)}</td>
+                </tr>`;
+            });
+        }
+    }
+
     function runUpdateUI() {
         const selectedMonth = document.getElementById('monthFilter').value;
         const selectedUserFilter = document.getElementById('salesmanFilter') ? document.getElementById('salesmanFilter').value : 'all';
@@ -409,7 +573,7 @@
         if(leaderBody) leaderBody.innerHTML = '';
         if(salesmanReportBody) salesmanReportBody.innerHTML = '';
         
-        let teamTotal = 0, pieData = {}, lineData = {};
+        let teamTotal = 0, pieData = {}, lineData = {}, productData = {};
         let completedAmt = 0, returnedAmt = 0;
         let completedCount = 0, returnedCount = 0, cancelledCount = 0;
 
@@ -423,17 +587,23 @@
 
         monthlyData.forEach(item => {
             const status = item.status || 'Completed'; 
-            const sName = item.salesman;
+            const sName = item.salesman || 'unknown';
+            const prod = item.product || 'N/A';
 
             if(salesmanStats[sName]) {
                 if(status === 'Completed') salesmanStats[sName].completed += item.amount;
                 if(status === 'Returned') salesmanStats[sName].returned += item.amount;
                 if(status === 'Cancelled') salesmanStats[sName].cancelled++;
             }
-            
+
             if(status === 'Completed') {
                 teamTotal += item.amount;
                 pieData[item.salesman] = (pieData[item.salesman] || 0) + item.amount;
+                
+                // Track global product data for the chart
+                if (isViewingAll || item.salesman === targetScopeUser) {
+                    productData[prod] = (productData[prod] || 0) + item.amount;
+                }
             }
 
             if(!isViewingAll && item.salesman === targetScopeUser) {
@@ -483,14 +653,38 @@
                 pieChart.update();
             } else { 
                 document.getElementById('pieBox').style.display = 'none'; 
-                document.getElementById('detailedReportSection').style.display = 'none';
+                document.getElementById('detailedReportSection').style.display = 'block';
+                if (leaderBody) leaderBody.innerHTML = `<tr><td colspan="3" style="text-align:center; color:#64748b;">Leaderboard hidden while filtering specific user.</td></tr>`;
+                
+                if (salesmanReportBody && salesmanStats[targetScopeUser]) {
+                    let stats = salesmanStats[targetScopeUser];
+                    let targetPerc = Math.min(100, (stats.completed / INDIVIDUAL_TARGET) * 100).toFixed(1);
+                    salesmanReportBody.innerHTML = `<tr>
+                        <td style="text-transform:capitalize; font-weight:600;">${targetScopeUser}</td>
+                        <td style="color:var(--success); font-weight:bold;">₹${formatINR(stats.completed)}</td>
+                        <td style="color:var(--danger);">₹${formatINR(stats.returned)}</td>
+                        <td>${stats.cancelled}</td>
+                        <td><span class="badge ${targetPerc >= 100 ? 'badge-completed' : 'badge-bill'}">${targetPerc}%</span></td>
+                    </tr>`;
+                }
             }
         }
 
-        // --- NEW ANNUAL CHART LOGIC ---
+        if(productChart) {
+            const sortedProducts = Object.entries(productData).sort((a,b) => b[1] - a[1]).slice(0, 10);
+            productChart.data.labels = sortedProducts.map(p => p[0]);
+            productChart.data.datasets[0].data = sortedProducts.map(p => p[1]);
+            productChart.update();
+            document.getElementById('productChartTitle').innerText = `📦 Top Products (${isViewingAll ? 'Team' : targetScopeUser.toUpperCase()})`;
+        }
+
+        // --- Execute the new decoupled product table update ---
+        renderProductTable();
+
         const isIndividualView = !isViewingAll || !isAdmin;
         document.getElementById('individualChartGrid').style.display = isIndividualView ? 'grid' : 'none';
-        document.getElementById('annualChartBox').style.display = isIndividualView ? 'block' : 'none'; // Show/Hide based on view
+        document.getElementById('annualChartBox').style.display = isIndividualView ? 'block' : 'none';
+        document.getElementById('performanceGrid').classList.toggle('split', isIndividualView);
         
         if(isIndividualView) {
             if(returnPieChart && billPieChart) {
@@ -500,17 +694,14 @@
                 billPieChart.update();
             }
 
-            // Extract year from selected month (e.g. "2026-07" -> "2026")
             const selectedYear = selectedMonth.slice(0, 4); 
             let annualData = {};
             
-            // Pre-fill all 12 months for the selected year with 0
             for(let i = 1; i <= 12; i++) {
                 let mm = i < 10 ? '0' + i : i;
                 annualData[`${selectedYear}-${mm}`] = 0;
             }
 
-            // Loop through all sales historical data, filter by selected year and salesman
             allSales.filter(s => s.salesman === targetScopeUser && s.date.startsWith(selectedYear) && (s.status || 'Completed') === 'Completed')
                     .forEach(s => {
                         const m = s.date.slice(0, 7);
@@ -520,7 +711,6 @@
                     });
 
             if(annualChart) {
-                // Map the labels to short month names (Jan, Feb, Mar...)
                 annualChart.data.labels = Object.keys(annualData).map(m => new Date(m + "-01").toLocaleString('default', { month: 'short' }));
                 annualChart.data.datasets[0].data = Object.values(annualData);
                 annualChart.update();
@@ -543,10 +733,12 @@
                 
                 const safeCustomer = escapeHTML(item.customer);
                 const safeBill = escapeHTML(item.billNo);
+                const safeProduct = escapeHTML(item.product || 'N/A');
                 
                 tbody.innerHTML += `<tr>
                     <td>${item.date}</td>
                     <td><span class="badge badge-bill">${safeBill}</span></td>
+                    <td><strong>${safeProduct}</strong></td>
                     <td><span class="badge ${badgeClass}">${st}</span></td>
                     <td>${safeCustomer}</td>
                     ${isAdmin ? `<td style="text-transform:capitalize">${item.salesman}</td>` : ''}
@@ -602,11 +794,12 @@
         let filtered = allSales.filter(s => s.date.startsWith(month));
         if (targetScopeUser) filtered = filtered.filter(s => s.salesman === targetScopeUser);
 
-        let csv = "Date,Bill,Status,Customer,Salesman,Amount\n";
+        let csv = "Date,Bill,Product,Status,Customer,Salesman,Amount\n";
         filtered.forEach(s => {
             const safeCustomer = (s.customer || '').replace(/"/g, '""');
+            const safeProduct = (s.product || 'N/A').replace(/"/g, '""');
             const status = s.status || 'Completed';
-            csv += `${s.date},${s.billNo},${status},"${safeCustomer}",${s.salesman},${s.amount}\n`;
+            csv += `${s.date},${s.billNo},"${safeProduct}",${status},"${safeCustomer}",${s.salesman},${s.amount}\n`;
         });
         
         const blob = new Blob([csv], {type: 'text/csv'});
@@ -615,19 +808,78 @@
         a.href = url; a.download = targetScopeUser ? `Sales_${targetScopeUser}_${month}.csv` : `Sales_Team_${month}.csv`; a.click();
     }
 
-    function addEntry() {
-        const amount = parseFloat(document.getElementById('amount').value);
+    function addProductRow(btn) {
+        btn.style.display = 'none';
+        btn.outerHTML = `<button class="btn-danger" style="padding: 0 15px; font-size: 16px;" onclick="this.parentElement.remove()" title="Remove this product">❌</button>`;
+        
+        const container = document.getElementById('productEntries');
+        container.insertAdjacentHTML('beforeend', `
+            <div class="product-row">
+                <input type="text" class="prod-name" placeholder="Product Name" style="flex:2;">
+                <input type="number" class="prod-amount" placeholder="Amount ₹" style="flex:1;">
+                <button class="btn-action" style="padding: 0 15px; font-size: 16px;" onclick="addProductRow(this)" title="Add another product">➕</button>
+            </div>
+        `);
+    }
+
+    function addBillEntries() {
+        const date = document.getElementById('date').value;
         const bill = document.getElementById('billNo').value || '-';
         const customer = document.getElementById('customer').value;
         const status = document.getElementById('status').value;
-        const date = document.getElementById('date').value;
         
-        if(!customer || isNaN(amount) || !date) return alert("Fill all fields");
-        db.ref('sales').push({ salesman: currentUser, date: date, billNo: bill, customer: customer, status: status, amount: amount, timestamp: Date.now() });
-        ['billNo', 'customer', 'amount'].forEach(id => document.getElementById(id).value = '');
+        if(!customer || !date) return alert("Please fill the Date and Customer Name.");
+        
+        let entryUser = currentUser;
+        if (currentUser === 'admin') {
+            const entrySelect = document.getElementById('entrySalesman');
+            if(entrySelect) entryUser = entrySelect.value;
+        }
+
+        const rows = document.querySelectorAll('.product-row');
+        let addedCount = 0;
+
+        rows.forEach(row => {
+            const pName = row.querySelector('.prod-name').value.trim();
+            const pAmt = parseFloat(row.querySelector('.prod-amount').value);
+            
+            if (pName && !isNaN(pAmt)) {
+                db.ref('sales').push({ 
+                    salesman: entryUser, 
+                    date: date, 
+                    billNo: bill, 
+                    product: pName, 
+                    customer: customer, 
+                    status: status, 
+                    amount: pAmt, 
+                    timestamp: Date.now() 
+                });
+                addedCount++;
+            }
+        });
+
+        if (addedCount === 0) {
+            return alert("Please enter at least one valid Product Name and Amount.");
+        }
+
+        document.getElementById('billNo').value = '';
+        document.getElementById('customer').value = '';
+        
+        const pContainer = document.getElementById('productEntries');
+        pContainer.innerHTML = `
+            <div class="product-row">
+                <input type="text" class="prod-name" placeholder="Product Name" style="flex:2;">
+                <input type="number" class="prod-amount" placeholder="Amount ₹" style="flex:1;">
+                <button class="btn-action" style="padding: 0 15px; font-size: 16px;" onclick="addProductRow(this)" title="Add another product">➕</button>
+            </div>
+        `;
+        
+        if(currentUser === 'admin') {
+            alert(`Successfully logged ${addedCount} product(s) under salesman: ${entryUser.toUpperCase()}`);
+        }
     }
 
-    function deleteEntry(id) { if(confirm("Delete this specific sale?")) db.ref('sales/'+id).remove(); }
+    function deleteEntry(id) { if(confirm("Delete this specific product record?")) db.ref('sales/'+id).remove(); }
     
     async function clearAllData() { 
         const enteredPass = prompt("WARNING: This will delete ALL sales.\nEnter Admin password:");
@@ -665,7 +917,6 @@
             });
         }
         
-        // --- Initialize Annual Bar Chart ---
         if(!annualChart) {
             annualChart = new Chart(document.getElementById('annualChart'), {
                 type: 'bar', 
@@ -674,6 +925,19 @@
                     maintainAspectRatio: false, 
                     plugins: { legend: { display: false } },
                     scales: { y: { beginAtZero: true } }
+                }
+            });
+        }
+
+        if(!productChart) {
+            productChart = new Chart(document.getElementById('productChart'), {
+                type: 'bar',
+                data: { labels: [], datasets: [{ label: 'Revenue (₹)', data: [], backgroundColor: '#0ea5e9', borderRadius: 4 }] },
+                options: {
+                    maintainAspectRatio: false,
+                    indexAxis: 'y',
+                    plugins: { legend: { display: false } },
+                    scales: { x: { beginAtZero: true } }
                 }
             });
         }
