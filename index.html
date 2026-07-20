@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Pro Sales Tracker v3.5.0</title>
+    <title>Pro Sales Tracker v3.6.1</title>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -141,6 +141,9 @@
     </style>
 </head>
 <body>
+
+<!-- Global Datalist for Searchable Products -->
+<datalist id="availableProductsList"></datalist>
 
 <div id="loginOverlay">
     <div class="login-card">
@@ -308,7 +311,7 @@
                 <select id="productReportSalesmanFilter" class="no-print glass-panel" onchange="renderProductTable()" style="width: auto; padding: 6px 10px; font-size: 13px;">
                     <option value="all">📊 All Team Data</option>
                 </select>
-                <!-- NEW PRODUCT FILTER -->
+                <!-- PRODUCT FILTER -->
                 <select id="productReportItemFilter" class="no-print glass-panel" onchange="renderProductTable()" style="width: auto; padding: 6px 10px; font-size: 13px;">
                     <option value="all">📦 All Products</option>
                 </select>
@@ -363,11 +366,10 @@
         </div>
 
         <h4 style="margin: 0 0 10px 0; font-size: 13px;">📦 Add Products to this Bill</h4>
+        <!-- SEARCHABLE INPUT DATALIST INTEGRATION -->
         <div id="productEntries">
             <div class="product-row">
-                <select class="prod-name" style="flex:2;">
-                    <option value="" disabled selected>Select Product</option>
-                </select>
+                <input list="availableProductsList" class="prod-name" placeholder="Search or Type Product..." style="flex:2;" autocomplete="off">
                 <input type="number" class="prod-amount" placeholder="Amount ₹" style="flex:1;">
                 <button class="btn-action" style="padding: 0 15px; font-size: 16px;" onclick="addProductRow(this)" title="Add another product">➕</button>
             </div>
@@ -390,7 +392,7 @@
             <tbody id="tableBody"></tbody>
         </table>
     </div>
-    <div class="version-tag">Version 3.5.0 | Dual Filters in Breakdown</div>
+    <div class="version-tag">Version 3.6.1 | Final Fixed Release</div>
 </div>
 
 <script>
@@ -470,7 +472,7 @@
             const data = snap.val() || {};
             availableProducts = Object.keys(data).map(k => ({ id: k, name: data[k].name }));
             if(currentUser === 'admin') renderProductList();
-            populateProductDropdowns();
+            populateProductDropdowns(); // Updates global searchable datalist
         });
     }
 
@@ -913,15 +915,10 @@
         btn.style.display = 'none';
         btn.outerHTML = `<button class="btn-danger" style="padding: 0 15px; font-size: 16px;" onclick="this.parentElement.remove()" title="Remove this product">❌</button>`;
         
-        const optionsHtml = availableProducts.map(p => `<option value="${escapeHTML(p.name)}">${escapeHTML(p.name)}</option>`).join('');
-        
         const container = document.getElementById('productEntries');
         container.insertAdjacentHTML('beforeend', `
             <div class="product-row">
-                <select class="prod-name" style="flex:2;">
-                    <option value="" disabled selected>Select Product</option>
-                    ${optionsHtml}
-                </select>
+                <input list="availableProductsList" class="prod-name" placeholder="Search or Type Product..." style="flex:2;" autocomplete="off">
                 <input type="number" class="prod-amount" placeholder="Amount ₹" style="flex:1;">
                 <button class="btn-action" style="padding: 0 15px; font-size: 16px;" onclick="addProductRow(this)" title="Add another product">➕</button>
             </div>
@@ -949,20 +946,27 @@
         let hasError = false;
 
         rows.forEach(row => {
-            const selectEl = row.querySelector('.prod-name');
-            const pName = selectEl.value;
+            const rawName = row.querySelector('.prod-name').value.trim();
             const pAmtText = row.querySelector('.prod-amount').value;
             const pAmt = parseFloat(pAmtText);
             
-            if (!pName || isNaN(pAmt) || pAmt <= 0 || pAmtText.trim() === '') {
+            // Silently skip if the row is completely blank
+            if (!rawName && pAmtText.trim() === '') {
+                return;
+            }
+            
+            if (!rawName || isNaN(pAmt) || pAmt <= 0) {
                 hasError = true;
             } else {
-                validDataToPush.push({ name: pName, amount: pAmt });
+                // Check if product exists to keep case consistency
+                const matchedProduct = availableProducts.find(p => p.name.toLowerCase() === rawName.toLowerCase());
+                const finalName = matchedProduct ? matchedProduct.name : rawName;
+                validDataToPush.push({ name: finalName, amount: pAmt });
             }
         });
 
         if (hasError || validDataToPush.length === 0) {
-            return alert("⚠️ Validation Failed: Every product row must have a selected product and a valid amount.");
+            return alert("⚠️ Validation Failed: Every submitted product row must have a valid product name and an amount greater than 0.");
         }
 
         validDataToPush.forEach(item => {
@@ -981,14 +985,11 @@
         document.getElementById('billNo').value = '';
         document.getElementById('customer').value = '';
         
-        const optionsHtml = availableProducts.map(p => `<option value="${escapeHTML(p.name)}">${escapeHTML(p.name)}</option>`).join('');
+        // Resetting the UI to default state with Datalist Inputs
         const pContainer = document.getElementById('productEntries');
         pContainer.innerHTML = `
             <div class="product-row">
-                <select class="prod-name" style="flex:2;">
-                    <option value="" disabled selected>Select Product</option>
-                    ${optionsHtml}
-                </select>
+                <input list="availableProductsList" class="prod-name" placeholder="Search or Type Product..." style="flex:2;" autocomplete="off">
                 <input type="number" class="prod-amount" placeholder="Amount ₹" style="flex:1;">
                 <button class="btn-action" style="padding: 0 15px; font-size: 16px;" onclick="addProductRow(this)" title="Add another product">➕</button>
             </div>
@@ -1024,8 +1025,17 @@
     function addNewProduct() {
         const pName = document.getElementById('newProductName').value.trim();
         if(!pName) return;
+        
+        // Anti-Duplication Check
+        const isDuplicate = availableProducts.some(p => p.name.toLowerCase() === pName.toLowerCase());
+        if(isDuplicate) {
+            alert("⚠️ This product already exists in the catalog!");
+            return;
+        }
+
         db.ref('products').push({ name: pName }).then(() => {
             document.getElementById('newProductName').value = '';
+            alert("✅ Product Added!");
         });
     }
 
@@ -1043,17 +1053,13 @@
     }
 
     function populateProductDropdowns() {
-        const selects = document.querySelectorAll('.prod-name');
-        const optionsHtml = `<option value="" disabled selected>Select Product</option>` + availableProducts.map(p => `<option value="${escapeHTML(p.name)}">${escapeHTML(p.name)}</option>`).join('');
-        
-        selects.forEach(select => {
-            const currentVal = select.value;
-            select.innerHTML = optionsHtml;
-            if(currentVal && availableProducts.find(p => p.name === currentVal)) {
-                select.value = currentVal;
-            }
-        });
+        // Populate HTML <datalist> for searchable inputs globally
+        const datalist = document.getElementById('availableProductsList');
+        if(datalist) {
+            datalist.innerHTML = availableProducts.map(p => `<option value="${escapeHTML(p.name)}"></option>`).join('');
+        }
 
+        // Update the Report Breakdown Filter
         const reportSelect = document.getElementById('productReportItemFilter');
         if(reportSelect) {
             const currentReportVal = reportSelect.value;
