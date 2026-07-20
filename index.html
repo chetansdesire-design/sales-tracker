@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Pro Sales Tracker v3.6.1</title>
+    <title>Pro Sales Tracker v3.9.1</title>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -64,7 +64,7 @@
         @media (min-width: 768px) { .chart-grid.admin-mode { grid-template-columns: 1fr 1fr; } .chart-grid.split { grid-template-columns: 1fr 1fr; } }
         .chart-box { padding: 15px; height: 260px; }
         
-        /* 2. DARK GLASSMORPHISM FORM */
+        /* 2. MOBILE-FIRST DARK GLASSMORPHISM FORM */
         .form-panel { 
             background: rgba(15, 23, 42, 0.75); 
             backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
@@ -72,17 +72,50 @@
             color: white; padding: 20px; border-radius: 15px; margin-bottom: 20px; 
             box-shadow: 0 10px 30px rgba(0,0,0,0.15);
         }
-        .form-header { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin-bottom: 15px; border-bottom: 1px dashed rgba(255,255,255,0.2); padding-bottom: 15px; }
-        .product-row { display: flex; gap: 10px; margin-bottom: 10px; }
+        
+        .form-panel label {
+            font-size: 11px; font-weight: bold; margin-bottom: 5px; display: block; color: #cbd5e1;
+        }
+
+        .form-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        .form-grid-row {
+            display: flex;
+            gap: 15px;
+        }
+        .form-grid-row > div {
+            flex: 1;
+        }
         
         /* Transparent inputs for dark glass */
         .form-panel input, .form-panel select {
             background: rgba(255, 255, 255, 0.1);
             border: 1px solid rgba(255, 255, 255, 0.2);
-            color: white; padding: 12px; font-size: 15px;
+            color: white; font-size: 15px;
+            width: 100%; box-sizing: border-box;
         }
         .form-panel input::placeholder { color: #cbd5e1; font-weight: normal; }
         .form-panel select option { color: #0f172a; }
+
+        /* CUSTOM AUTOCOMPLETE STYLES */
+        .autocomplete-wrapper { flex: 2; position: relative; }
+        .autocomplete-list {
+            position: absolute; top: 100%; left: 0; right: 0;
+            background: #1e293b; border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 8px; max-height: 180px; overflow-y: auto;
+            z-index: 1000; display: none; padding: 0; margin: 4px 0 0 0;
+            list-style: none; box-shadow: 0 8px 16px rgba(0,0,0,0.5);
+        }
+        .autocomplete-list li {
+            padding: 12px 15px; color: white; border-bottom: 1px solid rgba(255,255,255,0.1);
+            cursor: pointer; font-size: 14px; transition: background 0.1s;
+        }
+        .autocomplete-list li:last-child { border-bottom: none; }
+        .autocomplete-list li:hover, .autocomplete-list li:active { background: var(--accent); }
         
         /* 3. THUMB-ZONE ERGONOMICS */
         .btn-add { background: var(--success); color: white; border: none; padding: 16px; border-radius: 12px; font-weight: bold; cursor: pointer; width: 100%; font-size: 16px; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3); transition: transform 0.1s; }
@@ -101,8 +134,8 @@
             }
         }
 
-        .btn-danger { background: var(--danger); color: white; border: none; padding: 8px 15px; border-radius: 8px; font-size: 12px; cursor: pointer; }
-        .btn-action { background: var(--accent); color: white; border: none; padding: 8px 15px; border-radius: 8px; font-size: 12px; cursor: pointer; }
+        .btn-danger { background: var(--danger); color: white; border: none; cursor: pointer; }
+        .btn-action { background: var(--accent); color: white; border: none; cursor: pointer; }
         
         .table-wrap { overflow-x: auto; margin-bottom: 20px; }
         table { width: 100%; border-collapse: collapse; min-width: 750px; background: transparent; }
@@ -141,9 +174,6 @@
     </style>
 </head>
 <body>
-
-<!-- Global Datalist for Searchable Products -->
-<datalist id="availableProductsList"></datalist>
 
 <div id="loginOverlay">
     <div class="login-card">
@@ -194,7 +224,7 @@
             <div>
                 <h4 style="margin: 0 0 10px 0; color: var(--warn);">🎯 Set Monthly Target (Per User)</h4>
                 <div style="display: flex; gap: 10px;">
-                    <input type="number" id="newTargetInput" placeholder="Enter Target ₹">
+                    <input type="number" id="newTargetInput" placeholder="Enter Target ₹" style="padding: 10px;">
                     <button class="btn-login" onclick="updateGlobalTarget()" style="background: var(--warn); width: auto; padding: 10px 20px;">Update</button>
                 </div>
             </div>
@@ -202,7 +232,7 @@
             <div>
                 <h4 style="margin: 0 0 10px 0; color: var(--success);">📦 Manage Product Catalog</h4>
                 <div style="display: flex; gap: 10px;">
-                    <input type="text" id="newProductName" placeholder="New Product Name">
+                    <input type="text" id="newProductName" placeholder="New Product Name" style="padding: 10px;">
                     <button class="btn-login" onclick="addNewProduct()" style="background: var(--success); width: auto; padding: 10px 20px;">Add</button>
                 </div>
                 <div id="productListContainer" style="max-height: 150px; overflow-y: auto; border: 1px solid rgba(0,0,0,0.1); padding: 10px; border-radius: 10px; margin-top: 10px; background: rgba(255,255,255,0.4);"></div>
@@ -272,9 +302,9 @@
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
             <h3 style="font-size: 15px; margin:0;">🏆 Monthly Leaderboard</h3>
             <div style="display:flex; gap:5px;">
-                <button onclick="triggerPrint()" class="btn-action" style="background:#475569;">📄 Print</button>
-                <button onclick="exportToCSV()" class="btn-action">📥 CSV</button>
-                <button class="btn-danger" onclick="clearAllData()">🗑️ Reset</button>
+                <button onclick="triggerPrint()" class="btn-action" style="background:#475569; padding: 8px 15px;">📄 Print</button>
+                <button onclick="exportToCSV()" class="btn-action" style="padding: 8px 15px;">📥 CSV</button>
+                <button class="btn-danger" onclick="clearAllData()" style="padding: 8px 15px;">🗑️ Reset</button>
             </div>
         </div>
         <div class="table-wrap glass-panel">
@@ -333,49 +363,48 @@
         </div>
     </div>
 
-    <!-- MASTER-DETAIL FORM (DARK GLASSMORPHISM) -->
+    <!-- MOBILE-FRIENDLY MASTER ENTRY FORM WITH CUSTOM AUTOCOMPLETE -->
     <div class="form-panel" id="inputPanel">
-        <h4 style="margin: 0 0 15px 0;">📝 Enter Bill Details</h4>
+        <h4 style="margin: 0 0 15px 0;">📝 Enter Sale Details</h4>
         
-        <div class="form-header">
+        <div class="form-grid">
             <div id="adminSalesmanSelectContainer" style="display: none;">
-                <label style="font-size: 11px; font-weight: bold; margin-bottom: 3px; display: block; color: #cbd5e1;">Log Sale For:</label>
-                <select id="entrySalesman" style="font-weight: bold;"></select>
+                <label>Log Sale For:</label>
+                <select id="entrySalesman" style="font-weight: bold; font-size: 14px; padding: 10px;"></select>
             </div>
             
-            <div>
-                <label style="font-size: 11px; font-weight: bold; margin-bottom: 3px; display: block;">Date</label>
-                <input type="date" id="date">
+            <div class="form-grid-row">
+                <div>
+                    <label>Date</label>
+                    <input type="date" id="date" style="padding: 10px;">
+                </div>
+                <div>
+                    <label>Bill No.</label>
+                    <input type="text" id="billNo" placeholder="INV-1023" style="padding: 10px;">
+                </div>
             </div>
+
             <div>
-                <label style="font-size: 11px; font-weight: bold; margin-bottom: 3px; display: block;">Bill No.</label>
-                <input type="text" id="billNo" placeholder="e.g. INV-1023">
+                <label>Customer Name</label>
+                <input type="text" id="customer" placeholder="Enter Client Name" style="padding: 10px;">
             </div>
+
+            <!-- CUSTOM AUTOCOMPLETE LIST FORMAT -->
             <div>
-                <label style="font-size: 11px; font-weight: bold; margin-bottom: 3px; display: block;">Customer Name</label>
-                <input type="text" id="customer" placeholder="Enter Client Name">
-            </div>
-            <div>
-                <label style="font-size: 11px; font-weight: bold; margin-bottom: 3px; display: block;">Status</label>
-                <select id="status">
-                    <option value="Completed">✅ Completed</option>
-                    <option value="Returned">🔄 Returned</option>
-                    <option value="Cancelled">❌ Cancelled</option>
-                </select>
+                <label>Products (List Format)</label>
+                <div id="productEntries">
+                    <div class="product-entry-row" style="display: flex; gap: 8px; margin-bottom: 10px;">
+                        <div class="autocomplete-wrapper">
+                            <input type="text" class="prod-name" placeholder="Search/Select..." autocomplete="off" style="padding: 10px;" oninput="filterDropdown(this)" onfocus="filterDropdown(this)" onblur="hideDropdown(this)">
+                            <ul class="autocomplete-list"></ul>
+                        </div>
+                        <input type="number" class="prod-amount" placeholder="₹ Amt" style="flex: 1; padding: 10px; font-size: 14px; width:100%; box-sizing:border-box;">
+                        <button class="btn-action" style="padding: 0 12px; font-size: 16px; border-radius: 8px;" onclick="addProductRow(this)">➕</button>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <h4 style="margin: 0 0 10px 0; font-size: 13px;">📦 Add Products to this Bill</h4>
-        <!-- SEARCHABLE INPUT DATALIST INTEGRATION -->
-        <div id="productEntries">
-            <div class="product-row">
-                <input list="availableProductsList" class="prod-name" placeholder="Search or Type Product..." style="flex:2;" autocomplete="off">
-                <input type="number" class="prod-amount" placeholder="Amount ₹" style="flex:1;">
-                <button class="btn-action" style="padding: 0 15px; font-size: 16px;" onclick="addProductRow(this)" title="Add another product">➕</button>
-            </div>
-        </div>
-        
-        <!-- THUMB-ZONE BUTTON -->
         <button class="btn-add thumb-btn" onclick="addBillEntries()">Submit Full Bill</button>
     </div>
 
@@ -392,7 +421,7 @@
             <tbody id="tableBody"></tbody>
         </table>
     </div>
-    <div class="version-tag">Version 3.6.1 | Final Fixed Release</div>
+    <div class="version-tag">Version 3.9.1 | Fully Patched Smart Input</div>
 </div>
 
 <script>
@@ -472,7 +501,7 @@
             const data = snap.val() || {};
             availableProducts = Object.keys(data).map(k => ({ id: k, name: data[k].name }));
             if(currentUser === 'admin') renderProductList();
-            populateProductDropdowns(); // Updates global searchable datalist
+            populateProductDropdowns(); // Updates report filter dropwdowns
         });
     }
 
@@ -528,6 +557,149 @@
             updateMonthDropdown(); runUpdateUI();
         });
     }
+
+    /* CUSTOM AUTOCOMPLETE LOGIC */
+    function filterDropdown(input) {
+        const val = input.value.toLowerCase();
+        const wrapper = input.parentElement;
+        let list = wrapper.querySelector('.autocomplete-list');
+        list.innerHTML = ''; // clear old results
+        
+        // Show all if empty, else filter
+        const matches = val ? availableProducts.filter(p => p.name.toLowerCase().includes(val)) : availableProducts;
+        
+        if(matches.length > 0) {
+            matches.forEach(p => {
+                const li = document.createElement('li');
+                li.innerText = p.name;
+                // onmousedown registers BEFORE the input triggers 'blur'
+                li.onmousedown = function(e) {
+                    e.preventDefault(); 
+                    input.value = p.name;
+                    list.style.display = 'none';
+                };
+                list.appendChild(li);
+            });
+            list.style.display = 'block';
+        } else {
+            list.style.display = 'none';
+        }
+    }
+
+    function hideDropdown(input) {
+        const list = input.parentElement.querySelector('.autocomplete-list');
+        if(list) {
+            setTimeout(() => { list.style.display = 'none'; }, 200); // Slight delay for touch devices
+        }
+    }
+
+    function addProductRow(btn) {
+        btn.style.display = 'none';
+        btn.outerHTML = `<button class="btn-danger" style="padding: 0 12px; font-size: 16px; border-radius: 8px;" onclick="this.parentElement.remove()" title="Remove">❌</button>`;
+        
+        const container = document.getElementById('productEntries');
+        container.insertAdjacentHTML('beforeend', `
+            <div class="product-entry-row" style="display: flex; gap: 8px; margin-bottom: 10px;">
+                <div class="autocomplete-wrapper">
+                    <input type="text" class="prod-name" placeholder="Search/Select..." autocomplete="off" style="padding: 10px;" oninput="filterDropdown(this)" onfocus="filterDropdown(this)" onblur="hideDropdown(this)">
+                    <ul class="autocomplete-list"></ul>
+                </div>
+                <input type="number" class="prod-amount" placeholder="₹ Amt" style="flex: 1; padding: 10px; font-size: 14px; width:100%; box-sizing:border-box;">
+                <button class="btn-action" style="padding: 0 12px; font-size: 16px; border-radius: 8px;" onclick="addProductRow(this)">➕</button>
+            </div>
+        `);
+    }
+
+    function addBillEntries() {
+        const date = document.getElementById('date').value;
+        const bill = document.getElementById('billNo').value.trim();
+        const customer = document.getElementById('customer').value.trim();
+        
+        if(!date || !bill || !customer) {
+            return alert("⚠️ Please fill out Date, Bill No., and Customer Name.");
+        }
+        
+        let entryUser = currentUser;
+        if (currentUser === 'admin') {
+            const entrySelect = document.getElementById('entrySalesman');
+            if(entrySelect) entryUser = entrySelect.value;
+        }
+
+        const rows = document.querySelectorAll('.product-entry-row');
+        let validDataToPush = [];
+        let hasError = false;
+        let typoError = false;
+
+        rows.forEach(row => {
+            const rawName = row.querySelector('.prod-name').value.trim();
+            const pAmtText = row.querySelector('.prod-amount').value;
+            const pAmt = parseFloat(pAmtText);
+            
+            // Silently skip if the row is completely blank
+            if (!rawName && pAmtText.trim() === '') {
+                return;
+            }
+            
+            if (!rawName || isNaN(pAmt) || pAmt <= 0) {
+                hasError = true;
+            } else {
+                // Strict check: User MUST select from the dropdown options. No typos allowed.
+                const matchedProduct = availableProducts.find(p => p.name.toLowerCase() === rawName.toLowerCase());
+                
+                if(!matchedProduct) {
+                    typoError = true;
+                } else {
+                    validDataToPush.push({ name: matchedProduct.name, amount: pAmt });
+                }
+            }
+        });
+
+        if (typoError) {
+            return alert("⚠️ Validation Failed: One of the products entered does not match the catalog. Please select products directly from the dropdown list.");
+        }
+
+        if (hasError || validDataToPush.length === 0) {
+            return alert("⚠️ Validation Failed: Every submitted product row must have a valid product name and an amount greater than 0.");
+        }
+
+        validDataToPush.forEach(item => {
+            db.ref('sales').push({ 
+                salesman: entryUser, 
+                date: date, 
+                billNo: bill, 
+                product: item.name, 
+                customer: customer, 
+                status: 'Completed', 
+                amount: item.amount, 
+                timestamp: Date.now() 
+            });
+        });
+
+        document.getElementById('billNo').value = '';
+        document.getElementById('customer').value = '';
+        
+        // Resetting the UI to a single empty row
+        const pContainer = document.getElementById('productEntries');
+        pContainer.innerHTML = `
+            <div class="product-entry-row" style="display: flex; gap: 8px; margin-bottom: 10px;">
+                <div class="autocomplete-wrapper">
+                    <input type="text" class="prod-name" placeholder="Search/Select..." autocomplete="off" style="padding: 10px;" oninput="filterDropdown(this)" onfocus="filterDropdown(this)" onblur="hideDropdown(this)">
+                    <ul class="autocomplete-list"></ul>
+                </div>
+                <input type="number" class="prod-amount" placeholder="₹ Amt" style="flex: 1; padding: 10px; font-size: 14px; width:100%; box-sizing:border-box;">
+                <button class="btn-action" style="padding: 0 12px; font-size: 16px; border-radius: 8px;" onclick="addProductRow(this)">➕</button>
+            </div>
+        `;
+        
+        if(currentUser === 'admin') {
+            alert(`✅ Logged ${validDataToPush.length} product(s) under salesman: ${entryUser.toUpperCase()}`);
+        } else {
+            alert("✅ Sale saved successfully!");
+        }
+    }
+
+
+    /* BELOW THIS LINE IS UNCHANGED REPORT / ADMIN LOGIC */
 
     function populateAdminFilters() {
         const select = document.getElementById('salesmanFilter');
@@ -911,97 +1083,6 @@
         a.href = url; a.download = targetScopeUser ? `Sales_${targetScopeUser}_${month}.csv` : `Sales_Team_${month}.csv`; a.click();
     }
 
-    function addProductRow(btn) {
-        btn.style.display = 'none';
-        btn.outerHTML = `<button class="btn-danger" style="padding: 0 15px; font-size: 16px;" onclick="this.parentElement.remove()" title="Remove this product">❌</button>`;
-        
-        const container = document.getElementById('productEntries');
-        container.insertAdjacentHTML('beforeend', `
-            <div class="product-row">
-                <input list="availableProductsList" class="prod-name" placeholder="Search or Type Product..." style="flex:2;" autocomplete="off">
-                <input type="number" class="prod-amount" placeholder="Amount ₹" style="flex:1;">
-                <button class="btn-action" style="padding: 0 15px; font-size: 16px;" onclick="addProductRow(this)" title="Add another product">➕</button>
-            </div>
-        `);
-    }
-
-    function addBillEntries() {
-        const date = document.getElementById('date').value;
-        const bill = document.getElementById('billNo').value.trim();
-        const customer = document.getElementById('customer').value.trim();
-        const status = document.getElementById('status').value;
-        
-        if(!date || !bill || !customer) {
-            return alert("⚠️ Validation Failed: Please ensure Date, Bill No., and Customer Name are all filled out.");
-        }
-        
-        let entryUser = currentUser;
-        if (currentUser === 'admin') {
-            const entrySelect = document.getElementById('entrySalesman');
-            if(entrySelect) entryUser = entrySelect.value;
-        }
-
-        const rows = document.querySelectorAll('.product-row');
-        let validDataToPush = [];
-        let hasError = false;
-
-        rows.forEach(row => {
-            const rawName = row.querySelector('.prod-name').value.trim();
-            const pAmtText = row.querySelector('.prod-amount').value;
-            const pAmt = parseFloat(pAmtText);
-            
-            // Silently skip if the row is completely blank
-            if (!rawName && pAmtText.trim() === '') {
-                return;
-            }
-            
-            if (!rawName || isNaN(pAmt) || pAmt <= 0) {
-                hasError = true;
-            } else {
-                // Check if product exists to keep case consistency
-                const matchedProduct = availableProducts.find(p => p.name.toLowerCase() === rawName.toLowerCase());
-                const finalName = matchedProduct ? matchedProduct.name : rawName;
-                validDataToPush.push({ name: finalName, amount: pAmt });
-            }
-        });
-
-        if (hasError || validDataToPush.length === 0) {
-            return alert("⚠️ Validation Failed: Every submitted product row must have a valid product name and an amount greater than 0.");
-        }
-
-        validDataToPush.forEach(item => {
-            db.ref('sales').push({ 
-                salesman: entryUser, 
-                date: date, 
-                billNo: bill, 
-                product: item.name, 
-                customer: customer, 
-                status: status, 
-                amount: item.amount, 
-                timestamp: Date.now() 
-            });
-        });
-
-        document.getElementById('billNo').value = '';
-        document.getElementById('customer').value = '';
-        
-        // Resetting the UI to default state with Datalist Inputs
-        const pContainer = document.getElementById('productEntries');
-        pContainer.innerHTML = `
-            <div class="product-row">
-                <input list="availableProductsList" class="prod-name" placeholder="Search or Type Product..." style="flex:2;" autocomplete="off">
-                <input type="number" class="prod-amount" placeholder="Amount ₹" style="flex:1;">
-                <button class="btn-action" style="padding: 0 15px; font-size: 16px;" onclick="addProductRow(this)" title="Add another product">➕</button>
-            </div>
-        `;
-        
-        if(currentUser === 'admin') {
-            alert(`Successfully logged ${validDataToPush.length} product(s) under salesman: ${entryUser.toUpperCase()}`);
-        } else {
-            alert("✅ Sale saved successfully!");
-        }
-    }
-
     function deleteEntry(id) { if(confirm("Delete this specific product record?")) db.ref('sales/'+id).remove(); }
     
     async function clearAllData() { 
@@ -1053,13 +1134,8 @@
     }
 
     function populateProductDropdowns() {
-        // Populate HTML <datalist> for searchable inputs globally
-        const datalist = document.getElementById('availableProductsList');
-        if(datalist) {
-            datalist.innerHTML = availableProducts.map(p => `<option value="${escapeHTML(p.name)}"></option>`).join('');
-        }
-
-        // Update the Report Breakdown Filter
+        // Just updates the Report Breakdown Filter now, 
+        // because input entry uses dynamic Custom Autocomplete.
         const reportSelect = document.getElementById('productReportItemFilter');
         if(reportSelect) {
             const currentReportVal = reportSelect.value;
