@@ -3,48 +3,111 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Pro Sales Tracker v3.2.0</title>
+    <title>Pro Sales Tracker v3.5.0</title>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        :root { --primary: #0f172a; --accent: #3b82f6; --success: #10b981; --danger: #f43f5e; --admin: #8b5cf6; --bg: #f8fafc; --warn: #f59e0b; }
-        body { font-family: 'Inter', sans-serif; background: var(--bg); margin: 0; padding: 10px; -webkit-tap-highlight-color: transparent; }
+        :root { 
+            --primary: #0f172a; --accent: #3b82f6; --success: #10b981; 
+            --danger: #f43f5e; --admin: #8b5cf6; --warn: #f59e0b; 
+        }
+        
+        /* 1. GLASSMORPHISM BACKGROUND & BASE */
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background: linear-gradient(135deg, #e2e8f0, #e0e7ff, #f3e8ff); 
+            background-attachment: fixed;
+            margin: 0; padding: 10px; padding-bottom: 80px; 
+            -webkit-tap-highlight-color: transparent; 
+        }
         .container { max-width: 1100px; margin: auto; display: none; }
+        
+        /* Glass Panel Reusable Class */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05);
+            border-radius: 15px;
+        }
+
         #loginOverlay { position: fixed; inset: 0; background: var(--primary); display: flex; align-items: center; justify-content: center; z-index: 1000; }
         .login-card { background: white; padding: 30px; border-radius: 20px; width: 90%; max-width: 380px; text-align: center; }
         .login-card input, .settings-panel input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #e2e8f0; border-radius: 10px; box-sizing: border-box; font-size: 16px; }
+        
         .btn-login { width: 100%; padding: 14px; background: var(--accent); color: white; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; transition: opacity 0.2s; }
         .btn-login:hover { opacity: 0.9; }
+        
         header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding: 10px 0; }
+        
         .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 10px; margin-bottom: 15px; }
-        .stat-card { background: white; padding: 15px; border-radius: 15px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-        .stat-card h3 { font-size: 11px; color: #64748b; margin: 0; text-transform: uppercase; }
+        .stat-card { padding: 15px; text-align: center; }
+        .stat-card h3 { font-size: 11px; color: #475569; margin: 0; text-transform: uppercase; }
         .stat-card p { font-size: 17px; font-weight: 800; margin: 5px 0 0; }
-        .filter-section { margin-bottom: 15px; background: white; padding: 10px; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.03); display: flex; gap: 15px; }
+        
+        .filter-section { margin-bottom: 15px; padding: 10px; display: flex; gap: 15px; }
         .filter-box { flex: 1; }
-        select { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0; font-size: 14px; font-weight: 600; color: var(--primary); }
-        .progress-container { background: white; padding: 15px; border-radius: 15px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-        .progress-bar-bg { width: 100%; background: #e2e8f0; height: 10px; border-radius: 10px; overflow: hidden; margin-top: 8px; }
+        
+        select, input[type="date"], input[type="text"], input[type="number"] { 
+            width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0; 
+            font-size: 14px; font-weight: 600; color: var(--primary); background: rgba(255,255,255,0.9);
+            box-sizing: border-box;
+        }
+        
+        .progress-container { padding: 15px; margin-bottom: 20px; }
+        .progress-bar-bg { width: 100%; background: rgba(226, 232, 240, 0.5); height: 10px; border-radius: 10px; overflow: hidden; margin-top: 8px; }
         #progressBar { width: 0%; height: 100%; background: linear-gradient(90deg, var(--accent), var(--success)); transition: width 0.6s ease; }
         
         .chart-grid { display: grid; grid-template-columns: 1fr; gap: 15px; margin-bottom: 15px; }
         @media (min-width: 768px) { .chart-grid.admin-mode { grid-template-columns: 1fr 1fr; } .chart-grid.split { grid-template-columns: 1fr 1fr; } }
-        .chart-box { background: white; padding: 15px; border-radius: 15px; height: 260px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .chart-box { padding: 15px; height: 260px; }
         
-        .form-panel { background: var(--primary); color: white; padding: 20px; border-radius: 15px; margin-bottom: 20px; }
-        .form-header { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin-bottom: 15px; border-bottom: 1px dashed #334155; padding-bottom: 15px; }
+        /* 2. DARK GLASSMORPHISM FORM */
+        .form-panel { 
+            background: rgba(15, 23, 42, 0.75); 
+            backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: white; padding: 20px; border-radius: 15px; margin-bottom: 20px; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+        }
+        .form-header { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin-bottom: 15px; border-bottom: 1px dashed rgba(255,255,255,0.2); padding-bottom: 15px; }
         .product-row { display: flex; gap: 10px; margin-bottom: 10px; }
-        input { padding: 12px; border-radius: 8px; border: 1px solid #334155; font-size: 16px; width: 100%; box-sizing: border-box; }
-        select { padding: 12px; border-radius: 8px; border: 1px solid #334155; font-size: 16px; width: 100%; box-sizing: border-box; }
-        .btn-add { background: var(--success); color: white; border: none; padding: 14px; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%; font-size: 15px; }
+        
+        /* Transparent inputs for dark glass */
+        .form-panel input, .form-panel select {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white; padding: 12px; font-size: 15px;
+        }
+        .form-panel input::placeholder { color: #cbd5e1; font-weight: normal; }
+        .form-panel select option { color: #0f172a; }
+        
+        /* 3. THUMB-ZONE ERGONOMICS */
+        .btn-add { background: var(--success); color: white; border: none; padding: 16px; border-radius: 12px; font-weight: bold; cursor: pointer; width: 100%; font-size: 16px; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3); transition: transform 0.1s; }
+        .btn-add:active { transform: scale(0.98); }
+        
+        @media (max-width: 768px) {
+            .btn-add.thumb-btn {
+                position: fixed;
+                bottom: 15px;
+                left: 5%;
+                width: 90%;
+                z-index: 999;
+                box-shadow: 0 8px 25px rgba(16, 185, 129, 0.5);
+                font-size: 18px;
+                padding: 18px;
+            }
+        }
+
         .btn-danger { background: var(--danger); color: white; border: none; padding: 8px 15px; border-radius: 8px; font-size: 12px; cursor: pointer; }
         .btn-action { background: var(--accent); color: white; border: none; padding: 8px 15px; border-radius: 8px; font-size: 12px; cursor: pointer; }
         
-        .table-wrap { background: white; border-radius: 15px; overflow-x: auto; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 20px; }
-        table { width: 100%; border-collapse: collapse; min-width: 750px; }
-        th { background: #f1f5f9; padding: 12px; text-align: left; font-size: 11px; color: #64748b; }
-        td { padding: 12px; border-top: 1px solid #f1f5f9; font-size: 13px; }
+        .table-wrap { overflow-x: auto; margin-bottom: 20px; }
+        table { width: 100%; border-collapse: collapse; min-width: 750px; background: transparent; }
+        th { background: rgba(241, 245, 249, 0.6); padding: 12px; text-align: left; font-size: 11px; color: #475569; border-bottom: 2px solid #e2e8f0; }
+        td { padding: 12px; border-bottom: 1px solid rgba(226, 232, 240, 0.6); font-size: 13px; }
         
         .badge { padding: 4px 8px; border-radius: 6px; font-size: 10px; font-weight: 700; }
         .badge-bill { background: #e2e8f0; color: #475569; }
@@ -52,11 +115,11 @@
         .badge-returned { background: #fee2e2; color: #991b1b; }
         .badge-cancelled { background: #f3f4f6; color: #374151; }
 
-        .settings-panel { display:none; background: white; padding: 20px; border-radius: 15px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        .version-tag { font-size: 10px; color: #94a3b8; text-align: center; margin-top: 20px; }
-        .admin-manage-grid { display: grid; grid-template-columns: 1fr; gap: 20px; margin-top: 15px; border-top: 1px dashed #e2e8f0; padding-top: 15px; }
+        .settings-panel { display:none; padding: 20px; margin-bottom: 20px; }
+        .version-tag { font-size: 10px; color: #94a3b8; text-align: center; margin-top: 20px; padding-bottom: 40px; }
+        .admin-manage-grid { display: grid; grid-template-columns: 1fr; gap: 20px; margin-top: 15px; border-top: 1px dashed #cbd5e1; padding-top: 15px; }
         @media (min-width: 768px) { .admin-manage-grid { grid-template-columns: 1fr 1fr; } }
-        .salesman-list-item { display: flex; justify-content: space-between; align-items: center; padding: 8px; background: #f8fafc; border-radius: 8px; margin-bottom: 6px; font-weight: 600; text-transform: capitalize; }
+        .salesman-list-item { display: flex; justify-content: space-between; align-items: center; padding: 8px; background: rgba(255,255,255,0.5); border-radius: 8px; margin-bottom: 6px; font-weight: 600; text-transform: capitalize; border: 1px solid rgba(255,255,255,0.8); }
         
         /* --- PDF & PRINT A4 ENGINE --- */
         #printHeader { display: none; }
@@ -64,7 +127,8 @@
             @page { size: A4 portrait; margin: 15mm; }
             * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
             body { background: white !important; margin: 0; padding: 0; }
-            header button, #settingsPanel, .filter-section, .form-panel, .btn-action, .btn-danger, #loginOverlay, .delete-btn, .no-print { display: none !important; }
+            .glass-panel { background: white !important; backdrop-filter: none !important; border: 1px solid #e2e8f0 !important; box-shadow: none !important; border-radius: 0 !important; }
+            header button, #settingsPanel, .filter-section, .form-panel, .btn-action, .btn-danger, #loginOverlay, .delete-btn, .no-print, .thumb-btn { display: none !important; }
             #printHeader { display: block !important; text-align: center; margin-bottom: 20px; font-family: sans-serif; }
             #printHeader h1 { margin: 0; font-size: 24px; color: var(--primary); }
             #printHeader p { margin: 5px 0 0 0; color: #64748b; font-size: 14px; }
@@ -102,7 +166,7 @@
         </div>
     </header>
 
-    <div id="settingsPanel" class="settings-panel">
+    <div id="settingsPanel" class="settings-panel glass-panel">
         <h3 style="margin-top:0; font-size: 16px;">Account Settings</h3>
         <div style="position: relative; max-width: 320px;">
             <input type="password" id="newPass" placeholder="Enter New Password">
@@ -119,12 +183,31 @@
             </div>
             <div>
                 <h4 style="margin: 0 0 10px 0; color: var(--danger);">👥 Manage Sales Team</h4>
-                <div id="salesmenListContainer" style="max-height: 180px; overflow-y: auto; border: 1px solid #e2e8f0; padding: 10px; border-radius: 10px;"></div>
+                <div id="salesmenListContainer" style="max-height: 180px; overflow-y: auto; border: 1px solid rgba(0,0,0,0.1); padding: 10px; border-radius: 10px; background: rgba(255,255,255,0.4);"></div>
+            </div>
+        </div>
+
+        <div id="adminConfigSection" class="admin-manage-grid" style="display: none;">
+            <div>
+                <h4 style="margin: 0 0 10px 0; color: var(--warn);">🎯 Set Monthly Target (Per User)</h4>
+                <div style="display: flex; gap: 10px;">
+                    <input type="number" id="newTargetInput" placeholder="Enter Target ₹">
+                    <button class="btn-login" onclick="updateGlobalTarget()" style="background: var(--warn); width: auto; padding: 10px 20px;">Update</button>
+                </div>
+            </div>
+            
+            <div>
+                <h4 style="margin: 0 0 10px 0; color: var(--success);">📦 Manage Product Catalog</h4>
+                <div style="display: flex; gap: 10px;">
+                    <input type="text" id="newProductName" placeholder="New Product Name">
+                    <button class="btn-login" onclick="addNewProduct()" style="background: var(--success); width: auto; padding: 10px 20px;">Add</button>
+                </div>
+                <div id="productListContainer" style="max-height: 150px; overflow-y: auto; border: 1px solid rgba(0,0,0,0.1); padding: 10px; border-radius: 10px; margin-top: 10px; background: rgba(255,255,255,0.4);"></div>
             </div>
         </div>
     </div>
 
-    <div class="filter-section">
+    <div class="filter-section glass-panel">
         <div class="filter-box">
             <label style="font-size: 10px; color: #64748b; font-weight: 800; display:block; margin-bottom:5px;">MONTH</label>
             <select id="monthFilter" onchange="runUpdateUI()"></select>
@@ -138,12 +221,12 @@
     </div>
 
     <div class="stats-grid">
-        <div class="stat-card"><h3>Target</h3><p id="targetValText">₹10L</p></div>
-        <div class="stat-card"><h3><span id="statTitle">Achieved</span></h3><p id="totalVal" style="color: var(--success);">₹0</p></div>
-        <div class="stat-card"><h3>Gap</h3><p id="gapVal" style="color: var(--danger);">₹10L</p></div>
+        <div class="stat-card glass-panel"><h3>Target</h3><p id="targetValText">₹10L</p></div>
+        <div class="stat-card glass-panel"><h3><span id="statTitle">Achieved</span></h3><p id="totalVal" style="color: var(--success);">₹0</p></div>
+        <div class="stat-card glass-panel"><h3>Gap</h3><p id="gapVal" style="color: var(--danger);">₹10L</p></div>
     </div>
 
-    <div class="progress-container">
+    <div class="progress-container glass-panel">
         <div style="display:flex; justify-content:space-between; font-size:12px; font-weight:bold; color:#475569;">
             <span id="progLabel">Target Progress</span>
             <span id="progressPercent">0%</span>
@@ -151,31 +234,31 @@
         <div class="progress-bar-bg"><div id="progressBar"></div></div>
     </div>
 
-    <!-- MAIN CHARTS (Timeline & Admin Pie) -->
+    <!-- MAIN CHARTS -->
     <div class="chart-grid" id="chartGrid">
-        <div class="chart-box"><canvas id="lineChart"></canvas></div>
-        <div class="chart-box" id="pieBox" style="display:none;"><canvas id="pieChart"></canvas></div>
+        <div class="chart-box glass-panel"><canvas id="lineChart"></canvas></div>
+        <div class="chart-box glass-panel" id="pieBox" style="display:none;"><canvas id="pieChart"></canvas></div>
     </div>
 
-    <!-- INDIVIDUAL RATIO CHARTS (Returns & Bills) -->
+    <!-- INDIVIDUAL RATIO CHARTS -->
     <div class="chart-grid split" id="individualChartGrid" style="display:none;">
-        <div class="chart-box" style="height: 220px;">
+        <div class="chart-box glass-panel" style="height: 220px;">
             <h4 style="margin:0 0 5px 0; font-size:12px; text-align:center; color:#64748b;">💰 Revenue: Return Ratio</h4>
             <div style="height: 180px;"><canvas id="returnPieChart"></canvas></div>
         </div>
-        <div class="chart-box" style="height: 220px;">
+        <div class="chart-box glass-panel" style="height: 220px;">
             <h4 style="margin:0 0 5px 0; font-size:12px; text-align:center; color:#64748b;">📄 Bills: Status Ratio</h4>
             <div style="height: 180px;"><canvas id="billPieChart"></canvas></div>
         </div>
     </div>
 
-    <!-- PERFORMANCE CHARTS (Annual & Product) -->
+    <!-- PERFORMANCE CHARTS -->
     <div class="chart-grid split" id="performanceGrid" style="display:block; margin-bottom: 15px;">
-        <div class="chart-box" id="productChartBox" style="height: 260px;">
+        <div class="chart-box glass-panel" id="productChartBox" style="height: 260px;">
             <h4 id="productChartTitle" style="margin:0 0 5px 0; font-size:12px; text-align:center; color:#64748b;">📦 Top Products</h4>
             <div style="height: 220px;"><canvas id="productChart"></canvas></div>
         </div>
-        <div class="chart-box" id="annualChartBox" style="display:none; height: 260px;">
+        <div class="chart-box glass-panel" id="annualChartBox" style="display:none; height: 260px;">
             <h4 id="annualChartTitle" style="margin:0 0 5px 0; font-size:12px; text-align:center; color:#64748b;">📅 Annual Performance</h4>
             <div style="height: 220px;"><canvas id="annualChart"></canvas></div>
         </div>
@@ -186,12 +269,12 @@
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
             <h3 style="font-size: 15px; margin:0;">🏆 Monthly Leaderboard</h3>
             <div style="display:flex; gap:5px;">
-                <button onclick="triggerPrint()" class="btn-action" style="background:#475569;">📄 PDF / Print</button>
+                <button onclick="triggerPrint()" class="btn-action" style="background:#475569;">📄 Print</button>
                 <button onclick="exportToCSV()" class="btn-action">📥 CSV</button>
                 <button class="btn-danger" onclick="clearAllData()">🗑️ Reset</button>
             </div>
         </div>
-        <div class="table-wrap">
+        <div class="table-wrap glass-panel">
             <table>
                 <thead><tr><th>Rank</th><th>Salesman</th><th style="text-align:right">Monthly Rev (Completed)</th></tr></thead>
                 <tbody id="leaderboardBody"></tbody>
@@ -199,9 +282,8 @@
         </div>
         
         <div id="detailedReportSection">
-            <!-- DETAILED SALESMAN REPORT -->
             <h3 style="font-size: 15px; margin: 20px 0 10px 0;">👥 Salesman-wise Monthly Report</h3>
-            <div class="table-wrap">
+            <div class="table-wrap glass-panel">
                 <table>
                     <thead>
                         <tr>
@@ -218,15 +300,21 @@
         </div>
     </div>
 
-    <!-- NEW UNIVERSAL PRODUCT REPORT MATRIX WITH OWN DROPDOWN -->
+    <!-- UNIVERSAL PRODUCT REPORT -->
     <div id="productReportSection" style="margin-top: 20px; margin-bottom: 20px;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:10px;">
             <h3 style="font-size: 15px; margin: 0;">📦 Detailed Product Breakdown</h3>
-            <select id="productReportSalesmanFilter" class="no-print" onchange="renderProductTable()" style="width: auto; padding: 6px 10px; border-radius: 8px; border: 1px solid #e2e8f0; font-size: 13px; font-weight: 600; color: var(--primary);">
-                <option value="all">📊 All Team Data</option>
-            </select>
+            <div style="display:flex; gap: 10px;">
+                <select id="productReportSalesmanFilter" class="no-print glass-panel" onchange="renderProductTable()" style="width: auto; padding: 6px 10px; font-size: 13px;">
+                    <option value="all">📊 All Team Data</option>
+                </select>
+                <!-- NEW PRODUCT FILTER -->
+                <select id="productReportItemFilter" class="no-print glass-panel" onchange="renderProductTable()" style="width: auto; padding: 6px 10px; font-size: 13px;">
+                    <option value="all">📦 All Products</option>
+                </select>
+            </div>
         </div>
-        <div class="table-wrap">
+        <div class="table-wrap glass-panel">
             <table>
                 <thead id="productReportHead">
                     <tr>
@@ -242,14 +330,14 @@
         </div>
     </div>
 
-    <!-- MASTER-DETAIL FORM FOR MULTIPLE PRODUCTS PER BILL -->
+    <!-- MASTER-DETAIL FORM (DARK GLASSMORPHISM) -->
     <div class="form-panel" id="inputPanel">
         <h4 style="margin: 0 0 15px 0;">📝 Enter Bill Details</h4>
         
         <div class="form-header">
             <div id="adminSalesmanSelectContainer" style="display: none;">
                 <label style="font-size: 11px; font-weight: bold; margin-bottom: 3px; display: block; color: #cbd5e1;">Log Sale For:</label>
-                <select id="entrySalesman" style="border-color: var(--admin); color: var(--admin); font-weight: bold;"></select>
+                <select id="entrySalesman" style="font-weight: bold;"></select>
             </div>
             
             <div>
@@ -277,17 +365,20 @@
         <h4 style="margin: 0 0 10px 0; font-size: 13px;">📦 Add Products to this Bill</h4>
         <div id="productEntries">
             <div class="product-row">
-                <input type="text" class="prod-name" placeholder="Product Name" style="flex:2;">
+                <select class="prod-name" style="flex:2;">
+                    <option value="" disabled selected>Select Product</option>
+                </select>
                 <input type="number" class="prod-amount" placeholder="Amount ₹" style="flex:1;">
                 <button class="btn-action" style="padding: 0 15px; font-size: 16px;" onclick="addProductRow(this)" title="Add another product">➕</button>
             </div>
         </div>
-
-        <button class="btn-add" style="margin-top: 10px;" onclick="addBillEntries()">Submit Full Bill</button>
+        
+        <!-- THUMB-ZONE BUTTON -->
+        <button class="btn-add thumb-btn" onclick="addBillEntries()">Submit Full Bill</button>
     </div>
 
     <h3 style="font-size: 15px; margin: 10px 5px;">Transaction History</h3>
-    <div class="table-wrap">
+    <div class="table-wrap glass-panel">
         <table id="salesTable">
             <thead>
                 <tr>
@@ -299,11 +390,13 @@
             <tbody id="tableBody"></tbody>
         </table>
     </div>
-    <div class="version-tag">Version 3.2.0 | Dynamic Product-Salesman Filter Dropdown added</div>
+    <div class="version-tag">Version 3.5.0 | Dual Filters in Breakdown</div>
 </div>
 
 <script>
-    const INDIVIDUAL_TARGET = 1000000; 
+    let INDIVIDUAL_TARGET = 1000000; 
+    let availableProducts = [];
+    
     const firebaseConfig = {
         apiKey: "AIzaSyCkciiLP3SIrK1yNNqhs1JtlCc_c55YOOY",
         authDomain: "sales-tracker-27660.app",
@@ -329,11 +422,7 @@
 
     function escapeHTML(str) {
         if (!str) return '';
-        return str.replace(/[&<>'"]/g, 
-            tag => ({
-                '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
-            }[tag] || tag)
-        );
+        return str.replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag));
     }
 
     window.onload = () => {
@@ -365,6 +454,23 @@
                 populateAdminFilters();
             }
             if(currentUser) runUpdateUI();
+        });
+
+        db.ref('settings/individualTarget').on('value', snap => {
+            if(snap.exists()) {
+                INDIVIDUAL_TARGET = snap.val();
+                if(document.getElementById('newTargetInput')) {
+                    document.getElementById('newTargetInput').value = INDIVIDUAL_TARGET;
+                }
+                if(currentUser) runUpdateUI();
+            }
+        });
+
+        db.ref('products').on('value', snap => {
+            const data = snap.val() || {};
+            availableProducts = Object.keys(data).map(k => ({ id: k, name: data[k].name }));
+            if(currentUser === 'admin') renderProductList();
+            populateProductDropdowns();
         });
     }
 
@@ -398,13 +504,13 @@
             document.getElementById('pieBox').style.display = 'block';
             document.getElementById('adminSection').style.display = 'block';
             document.getElementById('adminManagementSection').style.display = 'grid';
+            document.getElementById('adminConfigSection').style.display = 'grid';
             document.getElementById('adminUserFilterBox').style.display = 'block';
             document.getElementById('adminSalesmanSelectContainer').style.display = 'block'; 
             document.getElementById('chartGrid').classList.add('admin-mode');
             renderSalesmenManagementList(); 
             populateAdminFilters();
         } else {
-            // Lock Product Filter to the active user if not admin
             const prodSelect = document.getElementById('productReportSalesmanFilter');
             if(prodSelect) {
                 prodSelect.innerHTML = `<option value="${currentUser}">👤 ${currentUser.toUpperCase()}</option>`;
@@ -422,7 +528,6 @@
     }
 
     function populateAdminFilters() {
-        // Global Dashboard Filter
         const select = document.getElementById('salesmanFilter');
         if(select) {
             const currentValue = select.value;
@@ -431,7 +536,6 @@
             select.innerHTML = html; select.value = currentValue || 'all';
         }
         
-        // Data Entry "Log As" Filter
         const entrySelect = document.getElementById('entrySalesman');
         if(entrySelect) {
             const currentEntry = entrySelect.value;
@@ -440,7 +544,6 @@
             entrySelect.innerHTML = entryHtml; entrySelect.value = currentEntry || 'admin';
         }
 
-        // Local Product Table Filter
         const prodSelect = document.getElementById('productReportSalesmanFilter');
         if(prodSelect) {
             const currentProd = prodSelect.value;
@@ -473,13 +576,16 @@
 
     function formatINR(number) { return number.toLocaleString('en-IN', { maximumFractionDigits: 0 }); }
 
-    // --- NEW DECOUPLED PRODUCT TABLE RENDER FUNCTION ---
     function renderProductTable() {
         const selectedMonth = document.getElementById('monthFilter').value;
         const pFilterSelect = document.getElementById('productReportSalesmanFilter');
+        const pItemSelect = document.getElementById('productReportItemFilter');
+        
         if (!pFilterSelect) return;
         
-        const pFilter = pFilterSelect.value; // 'all' or specific salesman string
+        const pFilter = pFilterSelect.value; 
+        const pItemFilter = pItemSelect ? pItemSelect.value : 'all';
+        
         const pBody = document.getElementById('productReportBody');
         const pThSalesman = document.getElementById('thProdSalesman');
         
@@ -494,7 +600,8 @@
             const sName = item.salesman || 'unknown';
             const prod = item.product || 'N/A';
 
-            // Only tally if the record matches the current table filter
+            if (pItemFilter !== 'all' && prod !== pItemFilter) return;
+
             if (pFilter === 'all' || pFilter === sName) {
                 if (!salesmanProductStats[sName]) salesmanProductStats[sName] = {};
                 if (!salesmanProductStats[sName][prod]) salesmanProductStats[sName][prod] = { completed: 0, returned: 0 };
@@ -505,7 +612,6 @@
         });
         
         if (pFilter === 'all') {
-            // Show Salesman Column when viewing "all"
             if(pThSalesman) pThSalesman.style.display = 'table-cell';
             let allEntries = [];
             
@@ -518,7 +624,6 @@
                 });
             });
             
-            // Sort by Salesman name alphabetically, then highest Net
             allEntries.sort((a,b) => a.salesman.localeCompare(b.salesman) || b.net - a.net).forEach(row => {
                 pBody.innerHTML += `<tr>
                     <td style="text-transform:capitalize;">${row.salesman}</td>
@@ -529,7 +634,6 @@
                 </tr>`;
             });
         } else {
-            // Hide Salesman column when viewing a specific person
             if(pThSalesman) pThSalesman.style.display = 'none';
             let prods = salesmanProductStats[pFilter] || {};
             let myEntries = [];
@@ -541,7 +645,6 @@
                 }
             });
             
-            // Sort by highest Net
             myEntries.sort((a,b) => b.net - a.net).forEach(row => {
                 pBody.innerHTML += `<tr>
                     <td><strong>${escapeHTML(row.product)}</strong></td>
@@ -600,7 +703,6 @@
                 teamTotal += item.amount;
                 pieData[item.salesman] = (pieData[item.salesman] || 0) + item.amount;
                 
-                // Track global product data for the chart
                 if (isViewingAll || item.salesman === targetScopeUser) {
                     productData[prod] = (productData[prod] || 0) + item.amount;
                 }
@@ -678,7 +780,6 @@
             document.getElementById('productChartTitle').innerText = `📦 Top Products (${isViewingAll ? 'Team' : targetScopeUser.toUpperCase()})`;
         }
 
-        // --- Execute the new decoupled product table update ---
         renderProductTable();
 
         const isIndividualView = !isViewingAll || !isAdmin;
@@ -812,10 +913,15 @@
         btn.style.display = 'none';
         btn.outerHTML = `<button class="btn-danger" style="padding: 0 15px; font-size: 16px;" onclick="this.parentElement.remove()" title="Remove this product">❌</button>`;
         
+        const optionsHtml = availableProducts.map(p => `<option value="${escapeHTML(p.name)}">${escapeHTML(p.name)}</option>`).join('');
+        
         const container = document.getElementById('productEntries');
         container.insertAdjacentHTML('beforeend', `
             <div class="product-row">
-                <input type="text" class="prod-name" placeholder="Product Name" style="flex:2;">
+                <select class="prod-name" style="flex:2;">
+                    <option value="" disabled selected>Select Product</option>
+                    ${optionsHtml}
+                </select>
                 <input type="number" class="prod-amount" placeholder="Amount ₹" style="flex:1;">
                 <button class="btn-action" style="padding: 0 15px; font-size: 16px;" onclick="addProductRow(this)" title="Add another product">➕</button>
             </div>
@@ -824,11 +930,13 @@
 
     function addBillEntries() {
         const date = document.getElementById('date').value;
-        const bill = document.getElementById('billNo').value || '-';
-        const customer = document.getElementById('customer').value;
+        const bill = document.getElementById('billNo').value.trim();
+        const customer = document.getElementById('customer').value.trim();
         const status = document.getElementById('status').value;
         
-        if(!customer || !date) return alert("Please fill the Date and Customer Name.");
+        if(!date || !bill || !customer) {
+            return alert("⚠️ Validation Failed: Please ensure Date, Bill No., and Customer Name are all filled out.");
+        }
         
         let entryUser = currentUser;
         if (currentUser === 'admin') {
@@ -837,45 +945,59 @@
         }
 
         const rows = document.querySelectorAll('.product-row');
-        let addedCount = 0;
+        let validDataToPush = [];
+        let hasError = false;
 
         rows.forEach(row => {
-            const pName = row.querySelector('.prod-name').value.trim();
-            const pAmt = parseFloat(row.querySelector('.prod-amount').value);
+            const selectEl = row.querySelector('.prod-name');
+            const pName = selectEl.value;
+            const pAmtText = row.querySelector('.prod-amount').value;
+            const pAmt = parseFloat(pAmtText);
             
-            if (pName && !isNaN(pAmt)) {
-                db.ref('sales').push({ 
-                    salesman: entryUser, 
-                    date: date, 
-                    billNo: bill, 
-                    product: pName, 
-                    customer: customer, 
-                    status: status, 
-                    amount: pAmt, 
-                    timestamp: Date.now() 
-                });
-                addedCount++;
+            if (!pName || isNaN(pAmt) || pAmt <= 0 || pAmtText.trim() === '') {
+                hasError = true;
+            } else {
+                validDataToPush.push({ name: pName, amount: pAmt });
             }
         });
 
-        if (addedCount === 0) {
-            return alert("Please enter at least one valid Product Name and Amount.");
+        if (hasError || validDataToPush.length === 0) {
+            return alert("⚠️ Validation Failed: Every product row must have a selected product and a valid amount.");
         }
+
+        validDataToPush.forEach(item => {
+            db.ref('sales').push({ 
+                salesman: entryUser, 
+                date: date, 
+                billNo: bill, 
+                product: item.name, 
+                customer: customer, 
+                status: status, 
+                amount: item.amount, 
+                timestamp: Date.now() 
+            });
+        });
 
         document.getElementById('billNo').value = '';
         document.getElementById('customer').value = '';
         
+        const optionsHtml = availableProducts.map(p => `<option value="${escapeHTML(p.name)}">${escapeHTML(p.name)}</option>`).join('');
         const pContainer = document.getElementById('productEntries');
         pContainer.innerHTML = `
             <div class="product-row">
-                <input type="text" class="prod-name" placeholder="Product Name" style="flex:2;">
+                <select class="prod-name" style="flex:2;">
+                    <option value="" disabled selected>Select Product</option>
+                    ${optionsHtml}
+                </select>
                 <input type="number" class="prod-amount" placeholder="Amount ₹" style="flex:1;">
                 <button class="btn-action" style="padding: 0 15px; font-size: 16px;" onclick="addProductRow(this)" title="Add another product">➕</button>
             </div>
         `;
         
         if(currentUser === 'admin') {
-            alert(`Successfully logged ${addedCount} product(s) under salesman: ${entryUser.toUpperCase()}`);
+            alert(`Successfully logged ${validDataToPush.length} product(s) under salesman: ${entryUser.toUpperCase()}`);
+        } else {
+            alert("✅ Sale saved successfully!");
         }
     }
 
@@ -893,6 +1015,57 @@
         } else { alert("Incorrect Password."); }
     }
     
+    function updateGlobalTarget() {
+        const t = parseFloat(document.getElementById('newTargetInput').value);
+        if(isNaN(t) || t <= 0) return alert("Enter a valid target amount");
+        db.ref('settings/individualTarget').set(t).then(() => alert("Global Target Updated!"));
+    }
+
+    function addNewProduct() {
+        const pName = document.getElementById('newProductName').value.trim();
+        if(!pName) return;
+        db.ref('products').push({ name: pName }).then(() => {
+            document.getElementById('newProductName').value = '';
+        });
+    }
+
+    function deleteProduct(id, name) {
+        if(confirm(`Delete product "${name}" from the catalog?`)) db.ref(`products/${id}`).remove();
+    }
+
+    function renderProductList() {
+        const list = document.getElementById('productListContainer');
+        if(!list) return;
+        list.innerHTML = availableProducts.length ? '' : '<span style="color:#475569; font-size:12px;">No products added yet.</span>';
+        availableProducts.forEach(p => {
+            list.innerHTML += `<div class="salesman-list-item"><span>📦 ${escapeHTML(p.name)}</span><button class="btn-danger" style="padding: 4px 8px;" onclick="deleteProduct('${p.id}', '${escapeHTML(p.name)}')">🗑️</button></div>`;
+        });
+    }
+
+    function populateProductDropdowns() {
+        const selects = document.querySelectorAll('.prod-name');
+        const optionsHtml = `<option value="" disabled selected>Select Product</option>` + availableProducts.map(p => `<option value="${escapeHTML(p.name)}">${escapeHTML(p.name)}</option>`).join('');
+        
+        selects.forEach(select => {
+            const currentVal = select.value;
+            select.innerHTML = optionsHtml;
+            if(currentVal && availableProducts.find(p => p.name === currentVal)) {
+                select.value = currentVal;
+            }
+        });
+
+        const reportSelect = document.getElementById('productReportItemFilter');
+        if(reportSelect) {
+            const currentReportVal = reportSelect.value;
+            let reportHtml = `<option value="all">📦 All Products</option>`;
+            availableProducts.forEach(p => reportHtml += `<option value="${escapeHTML(p.name)}">${escapeHTML(p.name)}</option>`);
+            reportSelect.innerHTML = reportHtml;
+            if(currentReportVal && (currentReportVal === 'all' || availableProducts.find(p => p.name === currentReportVal))) {
+                reportSelect.value = currentReportVal;
+            }
+        }
+    }
+
     function initCharts() {
         if(lineChart) lineChart.destroy();
         lineChart = new Chart(document.getElementById('lineChart'), {
