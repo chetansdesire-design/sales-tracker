@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Pro Sales Tracker v3.9.4</title>
+    <title>Pro Sales Tracker v3.9.5</title>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -419,7 +419,7 @@
             <tbody id="tableBody"></tbody>
         </table>
     </div>
-    <div class="version-tag">Version 3.9.4 | Final Build with Self-Delete</div>
+    <div class="version-tag">Version 3.9.5 | Stable Deletion Patch</div>
 </div>
 
 <script>
@@ -434,11 +434,9 @@
         appId: "1:960783153617:web:9b9fa521836b9f5ef488f0"
     };
 
+    // ONLY ADMIN REMAINS AS A FORCED DEFAULT. 
+    // This stops the system from automatically reviving deleted users upon refresh.
     const USERS_DEFAULT = { 
-        "vamshi": { password: "vamshi123" }, "sagar": { password: "sagar123" }, 
-        "suman": { password: "suman123" }, "kajal": { password: "kajal123" }, 
-        "ankit": { password: "ankit123" }, "shiva": { password: "shiva123" }, 
-        "arjun": { password: "arjun123" }, "riyaz": { password: "riyaz123" }, 
         "admin": { password: "admin789" } 
     };
 
@@ -1023,7 +1021,6 @@
                 const safeBill = escapeHTML(item.billNo);
                 const safeProduct = escapeHTML(item.product || 'N/A');
                 
-                // Allow user to delete if they are admin OR if they own the entry
                 const canDelete = isAdmin || item.salesman === currentUser;
                 
                 tbody.innerHTML += `<tr>
@@ -1059,7 +1056,12 @@
         });
     }
 
-    function deleteSalesman(username) { if(confirm(`Completely delete salesman "${username}"?`)) db.ref(`userConfigs/${username}`).remove(); }
+    function deleteSalesman(username) { 
+        if(confirm(`Completely delete salesman "${username}"?`)) {
+            db.ref(`userConfigs/${username}`).remove().catch(e => alert("Error: " + e.message)); 
+        }
+    }
+    
     function toggleSettings() { const p = document.getElementById('settingsPanel'); p.style.display = p.style.display === 'block' ? 'none' : 'block'; }
     function togglePassView() {
         const inp = document.getElementById('newPass'); const eye = document.getElementById('eyeIcon');
@@ -1096,7 +1098,11 @@
         a.href = url; a.download = targetScopeUser ? `Sales_${targetScopeUser}_${month}.csv` : `Sales_Team_${month}.csv`; a.click();
     }
 
-    function deleteEntry(id) { if(confirm("Delete this specific product record?")) db.ref('sales/'+id).remove(); }
+    function deleteEntry(id) { 
+        if(confirm("Delete this specific product record?")) {
+            db.ref('sales/'+id).remove().catch(e => alert("Error: " + e.message)); 
+        }
+    }
     
     async function clearAllData() { 
         const enteredPass = prompt("WARNING: This will delete ALL sales.\nEnter Admin password:");
@@ -1133,7 +1139,9 @@
     }
 
     function deleteProduct(id, name) {
-        if(confirm(`Delete product "${name}" from the catalog?`)) db.ref(`products/${id}`).remove();
+        if(confirm(`Delete product "${name}" from the catalog?`)) {
+            db.ref(`products/${id}`).remove().catch(e => alert("Error: " + e.message));
+        }
     }
 
     function renderProductList() {
