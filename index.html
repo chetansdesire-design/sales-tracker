@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Pro Sales Tracker v3.9.2</title>
+    <title>Pro Sales Tracker v3.9.4</title>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -117,13 +117,12 @@
         .autocomplete-list li:last-child { border-bottom: none; }
         .autocomplete-list li:hover, .autocomplete-list li:active { background: var(--accent); }
         
-        /* 3. THUMB-ZONE ERGONOMICS (FIXED FOR OVERLAP) */
+        /* 3. THUMB-ZONE ERGONOMICS */
         .btn-add { background: var(--success); color: white; border: none; padding: 16px; border-radius: 12px; font-weight: bold; cursor: pointer; width: 100%; font-size: 16px; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3); transition: transform 0.1s; }
         .btn-add:active { transform: scale(0.98); }
         
         @media (max-width: 768px) {
             .btn-add.thumb-btn {
-                /* Removed position: fixed to prevent overlapping fields when keyboard is open */
                 width: 100%;
                 box-shadow: 0 8px 25px rgba(16, 185, 129, 0.5);
                 font-size: 18px;
@@ -238,7 +237,7 @@
         </div>
     </div>
 
-    <!-- MOVED TO THE TOP: MOBILE-FRIENDLY MASTER ENTRY FORM WITH CUSTOM AUTOCOMPLETE -->
+    <!-- ENTRY FORM -->
     <div class="form-panel" id="inputPanel">
         <h4 style="margin: 0 0 15px 0;">📝 Enter Sale Details</h4>
         
@@ -282,9 +281,9 @@
 
         <button class="btn-add thumb-btn" onclick="addBillEntries()">Submit Full Bill</button>
     </div>
-    <!-- END MOVED ENTRY FORM -->
 
-    <div class="filter-section glass-panel">
+    <!-- FILTER SECTION (ADMIN ONLY) -->
+    <div class="filter-section glass-panel" id="mainFilterSection" style="display: none;">
         <div class="filter-box">
             <label style="font-size: 10px; color: #64748b; font-weight: 800; display:block; margin-bottom:5px;">MONTH</label>
             <select id="monthFilter" onchange="runUpdateUI()"></select>
@@ -317,7 +316,7 @@
         <div class="chart-box glass-panel" id="pieBox" style="display:none;"><canvas id="pieChart"></canvas></div>
     </div>
 
-    <!-- INDIVIDUAL RATIO CHARTS -->
+    <!-- INDIVIDUAL RATIO CHARTS (ADMIN ONLY) -->
     <div class="chart-grid split" id="individualChartGrid" style="display:none;">
         <div class="chart-box glass-panel" style="height: 220px;">
             <h4 style="margin:0 0 5px 0; font-size:12px; text-align:center; color:#64748b;">💰 Revenue: Return Ratio</h4>
@@ -329,8 +328,8 @@
         </div>
     </div>
 
-    <!-- PERFORMANCE CHARTS -->
-    <div class="chart-grid split" id="performanceGrid" style="display:block; margin-bottom: 15px;">
+    <!-- PERFORMANCE CHARTS (ADMIN ONLY) -->
+    <div class="chart-grid split" id="performanceGrid" style="display:none; margin-bottom: 15px;">
         <div class="chart-box glass-panel" id="productChartBox" style="height: 260px;">
             <h4 id="productChartTitle" style="margin:0 0 5px 0; font-size:12px; text-align:center; color:#64748b;">📦 Top Products</h4>
             <div style="height: 220px;"><canvas id="productChart"></canvas></div>
@@ -377,8 +376,8 @@
         </div>
     </div>
 
-    <!-- UNIVERSAL PRODUCT REPORT -->
-    <div id="productReportSection" style="margin-top: 20px; margin-bottom: 20px;">
+    <!-- UNIVERSAL PRODUCT REPORT (ADMIN ONLY) -->
+    <div id="productReportSection" style="display:none; margin-top: 20px; margin-bottom: 20px;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:10px;">
             <h3 style="font-size: 15px; margin: 0;">📦 Detailed Product Breakdown</h3>
             <div style="display:flex; gap: 10px;">
@@ -420,7 +419,7 @@
             <tbody id="tableBody"></tbody>
         </table>
     </div>
-    <div class="version-tag">Version 3.9.2 | Form Shifted & Layout Fixed</div>
+    <div class="version-tag">Version 3.9.4 | Final Build with Self-Delete</div>
 </div>
 
 <script>
@@ -436,8 +435,11 @@
     };
 
     const USERS_DEFAULT = { 
-        "arun": { password: "arun123" }, "adarsh": { password: "adarsh123" }, 
-        "javid": { password: "javid123" }, "other": { password: "other123" }, "admin": { password: "admin789" } 
+        "vamshi": { password: "vamshi123" }, "sagar": { password: "sagar123" }, 
+        "suman": { password: "suman123" }, "kajal": { password: "kajal123" }, 
+        "ankit": { password: "ankit123" }, "shiva": { password: "shiva123" }, 
+        "arjun": { password: "arjun123" }, "riyaz": { password: "riyaz123" }, 
+        "admin": { password: "admin789" } 
     };
 
     const CHART_COLORS = ['#3b82f6', '#10b981', '#f43f5e', '#8b5cf6', '#f59e0b', '#06b6d4', '#ec4899', '#84cc16'];
@@ -500,7 +502,7 @@
             const data = snap.val() || {};
             availableProducts = Object.keys(data).map(k => ({ id: k, name: data[k].name }));
             if(currentUser === 'admin') renderProductList();
-            populateProductDropdowns(); // Updates report filter dropwdowns
+            populateProductDropdowns(); 
         });
     }
 
@@ -547,6 +549,10 @@
                 prodSelect.value = currentUser;
                 prodSelect.disabled = true;
             }
+            document.getElementById('mainFilterSection').style.display = 'none';
+            document.getElementById('individualChartGrid').style.display = 'none';
+            document.getElementById('performanceGrid').style.display = 'none';
+            document.getElementById('productReportSection').style.display = 'none';
         }
         
         initCharts();
@@ -562,16 +568,14 @@
         const val = input.value.toLowerCase();
         const wrapper = input.parentElement;
         let list = wrapper.querySelector('.autocomplete-list');
-        list.innerHTML = ''; // clear old results
+        list.innerHTML = ''; 
         
-        // Show all if empty, else filter
         const matches = val ? availableProducts.filter(p => p.name.toLowerCase().includes(val)) : availableProducts;
         
         if(matches.length > 0) {
             matches.forEach(p => {
                 const li = document.createElement('li');
                 li.innerText = p.name;
-                // onmousedown registers BEFORE the input triggers 'blur'
                 li.onmousedown = function(e) {
                     e.preventDefault(); 
                     input.value = p.name;
@@ -588,7 +592,7 @@
     function hideDropdown(input) {
         const list = input.parentElement.querySelector('.autocomplete-list');
         if(list) {
-            setTimeout(() => { list.style.display = 'none'; }, 200); // Slight delay for touch devices
+            setTimeout(() => { list.style.display = 'none'; }, 200); 
         }
     }
 
@@ -634,7 +638,6 @@
             const pAmtText = row.querySelector('.prod-amount').value;
             const pAmt = parseFloat(pAmtText);
             
-            // Silently skip if the row is completely blank
             if (!rawName && pAmtText.trim() === '') {
                 return;
             }
@@ -642,7 +645,6 @@
             if (!rawName || isNaN(pAmt) || pAmt <= 0) {
                 hasError = true;
             } else {
-                // Strict check: User MUST select from the dropdown options. No typos allowed.
                 const matchedProduct = availableProducts.find(p => p.name.toLowerCase() === rawName.toLowerCase());
                 
                 if(!matchedProduct) {
@@ -677,7 +679,6 @@
         document.getElementById('billNo').value = '';
         document.getElementById('customer').value = '';
         
-        // Resetting the UI to a single empty row
         const pContainer = document.getElementById('productEntries');
         pContainer.innerHTML = `
             <div class="product-entry-row" style="display: flex; gap: 8px; margin-bottom: 10px;">
@@ -698,7 +699,7 @@
     }
 
 
-    /* BELOW THIS LINE IS UNCHANGED REPORT / ADMIN LOGIC */
+    /* ADMIN / REPORTS ENGINE */
 
     function populateAdminFilters() {
         const select = document.getElementById('salesmanFilter');
@@ -830,7 +831,7 @@
     }
 
     function runUpdateUI() {
-        const selectedMonth = document.getElementById('monthFilter').value;
+        const selectedMonth = document.getElementById('monthFilter').value || new Date().toISOString().slice(0, 7);
         const selectedUserFilter = document.getElementById('salesmanFilter') ? document.getElementById('salesmanFilter').value : 'all';
         
         const isAdmin = (currentUser === 'admin');
@@ -894,103 +895,116 @@
         document.getElementById('progressBar').style.width = progPerc + '%';
         document.getElementById('progressPercent').innerText = progPerc + '%';
         document.getElementById('statTitle').innerText = isViewingAll ? "Team Total" : "Completed";
-        document.getElementById('printSubheader').innerText = `${document.getElementById('monthFilter').options[document.getElementById('monthFilter').selectedIndex].text} | ${isViewingAll ? "All Team Overview" : `Salesman: ${targetScopeUser.toUpperCase()}`}`;
+        
+        const monthSelect = document.getElementById('monthFilter');
+        const monthText = monthSelect.options[monthSelect.selectedIndex] ? monthSelect.options[monthSelect.selectedIndex].text : selectedMonth;
+        document.getElementById('printSubheader').innerText = `${monthText} | ${isViewingAll ? "All Team Overview" : `Salesman: ${targetScopeUser.toUpperCase()}`}`;
 
-        if(isAdmin && pieChart) {
-            if(isViewingAll) {
-                document.getElementById('pieBox').style.display = 'block';
-                document.getElementById('detailedReportSection').style.display = 'block';
-                
-                Object.entries(pieData).sort((a,b) => b[1] - a[1]).forEach(([name, amt], i) => {
-                    if(leaderBody) leaderBody.innerHTML += `<tr><td>${i+1}</td><td style="text-transform:capitalize">${name}</td><td style="text-align:right">₹${formatINR(amt)}</td></tr>`;
-                });
-                
-                if(salesmanReportBody) {
-                    Object.keys(salesmanStats).forEach(name => {
-                        let stats = salesmanStats[name];
+        const showAdminIndividualStats = isAdmin && !isViewingAll;
+        
+        if (isAdmin) {
+            document.getElementById('mainFilterSection').style.display = 'flex';
+            document.getElementById('performanceGrid').style.display = 'block';
+            document.getElementById('productReportSection').style.display = 'block';
+            
+            document.getElementById('individualChartGrid').style.display = showAdminIndividualStats ? 'grid' : 'none';
+            document.getElementById('annualChartBox').style.display = showAdminIndividualStats ? 'block' : 'none';
+            document.getElementById('performanceGrid').classList.toggle('split', showAdminIndividualStats);
+
+            if(showAdminIndividualStats) {
+                if(returnPieChart && billPieChart) {
+                    returnPieChart.data.datasets[0].data = [completedAmt, returnedAmt];
+                    returnPieChart.update();
+                    billPieChart.data.datasets[0].data = [completedCount, returnedCount, cancelledCount];
+                    billPieChart.update();
+                }
+
+                const selectedYear = selectedMonth.slice(0, 4); 
+                let annualData = {};
+                for(let i = 1; i <= 12; i++) {
+                    let mm = i < 10 ? '0' + i : i;
+                    annualData[`${selectedYear}-${mm}`] = 0;
+                }
+
+                allSales.filter(s => s.salesman === targetScopeUser && s.date.startsWith(selectedYear) && (s.status || 'Completed') === 'Completed')
+                        .forEach(s => {
+                            const m = s.date.slice(0, 7);
+                            if(annualData[m] !== undefined) {
+                                annualData[m] += s.amount;
+                            }
+                        });
+
+                if(annualChart) {
+                    annualChart.data.labels = Object.keys(annualData).map(m => new Date(m + "-01").toLocaleString('default', { month: 'short' }));
+                    annualChart.data.datasets[0].data = Object.values(annualData);
+                    annualChart.update();
+                    document.getElementById('annualChartTitle').innerText = `📅 ${selectedYear} Annual Performance (${targetScopeUser.toUpperCase()})`;
+                }
+            }
+
+            if(pieChart) {
+                if(isViewingAll) {
+                    document.getElementById('pieBox').style.display = 'block';
+                    document.getElementById('detailedReportSection').style.display = 'block';
+                    
+                    Object.entries(pieData).sort((a,b) => b[1] - a[1]).forEach(([name, amt], i) => {
+                        if(leaderBody) leaderBody.innerHTML += `<tr><td>${i+1}</td><td style="text-transform:capitalize">${name}</td><td style="text-align:right">₹${formatINR(amt)}</td></tr>`;
+                    });
+                    
+                    if(salesmanReportBody) {
+                        Object.keys(salesmanStats).forEach(name => {
+                            let stats = salesmanStats[name];
+                            let targetPerc = Math.min(100, (stats.completed / INDIVIDUAL_TARGET) * 100).toFixed(1);
+                            salesmanReportBody.innerHTML += `<tr>
+                                <td style="text-transform:capitalize; font-weight:600;">${name}</td>
+                                <td style="color:var(--success); font-weight:bold;">₹${formatINR(stats.completed)}</td>
+                                <td style="color:var(--danger);">₹${formatINR(stats.returned)}</td>
+                                <td>${stats.cancelled}</td>
+                                <td><span class="badge ${targetPerc >= 100 ? 'badge-completed' : 'badge-bill'}">${targetPerc}%</span></td>
+                            </tr>`;
+                        });
+                    }
+                    
+                    const colorCount = Object.keys(pieData).length;
+                    const safeColors = Array.from({length: colorCount}, (_, i) => CHART_COLORS[i % CHART_COLORS.length]);
+                    
+                    pieChart.data.labels = Object.keys(pieData);
+                    pieChart.data.datasets[0].data = Object.values(pieData);
+                    pieChart.data.datasets[0].backgroundColor = safeColors;
+                    pieChart.update();
+                } else { 
+                    document.getElementById('pieBox').style.display = 'none'; 
+                    document.getElementById('detailedReportSection').style.display = 'block';
+                    if (leaderBody) leaderBody.innerHTML = `<tr><td colspan="3" style="text-align:center; color:#64748b;">Leaderboard hidden while filtering specific user.</td></tr>`;
+                    
+                    if (salesmanReportBody && salesmanStats[targetScopeUser]) {
+                        let stats = salesmanStats[targetScopeUser];
                         let targetPerc = Math.min(100, (stats.completed / INDIVIDUAL_TARGET) * 100).toFixed(1);
-                        salesmanReportBody.innerHTML += `<tr>
-                            <td style="text-transform:capitalize; font-weight:600;">${name}</td>
+                        salesmanReportBody.innerHTML = `<tr>
+                            <td style="text-transform:capitalize; font-weight:600;">${targetScopeUser}</td>
                             <td style="color:var(--success); font-weight:bold;">₹${formatINR(stats.completed)}</td>
                             <td style="color:var(--danger);">₹${formatINR(stats.returned)}</td>
                             <td>${stats.cancelled}</td>
                             <td><span class="badge ${targetPerc >= 100 ? 'badge-completed' : 'badge-bill'}">${targetPerc}%</span></td>
                         </tr>`;
-                    });
-                }
-                
-                const colorCount = Object.keys(pieData).length;
-                const safeColors = Array.from({length: colorCount}, (_, i) => CHART_COLORS[i % CHART_COLORS.length]);
-                
-                pieChart.data.labels = Object.keys(pieData);
-                pieChart.data.datasets[0].data = Object.values(pieData);
-                pieChart.data.datasets[0].backgroundColor = safeColors;
-                pieChart.update();
-            } else { 
-                document.getElementById('pieBox').style.display = 'none'; 
-                document.getElementById('detailedReportSection').style.display = 'block';
-                if (leaderBody) leaderBody.innerHTML = `<tr><td colspan="3" style="text-align:center; color:#64748b;">Leaderboard hidden while filtering specific user.</td></tr>`;
-                
-                if (salesmanReportBody && salesmanStats[targetScopeUser]) {
-                    let stats = salesmanStats[targetScopeUser];
-                    let targetPerc = Math.min(100, (stats.completed / INDIVIDUAL_TARGET) * 100).toFixed(1);
-                    salesmanReportBody.innerHTML = `<tr>
-                        <td style="text-transform:capitalize; font-weight:600;">${targetScopeUser}</td>
-                        <td style="color:var(--success); font-weight:bold;">₹${formatINR(stats.completed)}</td>
-                        <td style="color:var(--danger);">₹${formatINR(stats.returned)}</td>
-                        <td>${stats.cancelled}</td>
-                        <td><span class="badge ${targetPerc >= 100 ? 'badge-completed' : 'badge-bill'}">${targetPerc}%</span></td>
-                    </tr>`;
+                    }
                 }
             }
-        }
 
-        if(productChart) {
-            const sortedProducts = Object.entries(productData).sort((a,b) => b[1] - a[1]).slice(0, 10);
-            productChart.data.labels = sortedProducts.map(p => p[0]);
-            productChart.data.datasets[0].data = sortedProducts.map(p => p[1]);
-            productChart.update();
-            document.getElementById('productChartTitle').innerText = `📦 Top Products (${isViewingAll ? 'Team' : targetScopeUser.toUpperCase()})`;
-        }
-
-        renderProductTable();
-
-        const isIndividualView = !isViewingAll || !isAdmin;
-        document.getElementById('individualChartGrid').style.display = isIndividualView ? 'grid' : 'none';
-        document.getElementById('annualChartBox').style.display = isIndividualView ? 'block' : 'none';
-        document.getElementById('performanceGrid').classList.toggle('split', isIndividualView);
-        
-        if(isIndividualView) {
-            if(returnPieChart && billPieChart) {
-                returnPieChart.data.datasets[0].data = [completedAmt, returnedAmt];
-                returnPieChart.update();
-                billPieChart.data.datasets[0].data = [completedCount, returnedCount, cancelledCount];
-                billPieChart.update();
+            if(productChart) {
+                const sortedProducts = Object.entries(productData).sort((a,b) => b[1] - a[1]).slice(0, 10);
+                productChart.data.labels = sortedProducts.map(p => p[0]);
+                productChart.data.datasets[0].data = sortedProducts.map(p => p[1]);
+                productChart.update();
+                document.getElementById('productChartTitle').innerText = `📦 Top Products (${isViewingAll ? 'Team' : targetScopeUser.toUpperCase()})`;
             }
 
-            const selectedYear = selectedMonth.slice(0, 4); 
-            let annualData = {};
-            
-            for(let i = 1; i <= 12; i++) {
-                let mm = i < 10 ? '0' + i : i;
-                annualData[`${selectedYear}-${mm}`] = 0;
-            }
-
-            allSales.filter(s => s.salesman === targetScopeUser && s.date.startsWith(selectedYear) && (s.status || 'Completed') === 'Completed')
-                    .forEach(s => {
-                        const m = s.date.slice(0, 7);
-                        if(annualData[m] !== undefined) {
-                            annualData[m] += s.amount;
-                        }
-                    });
-
-            if(annualChart) {
-                annualChart.data.labels = Object.keys(annualData).map(m => new Date(m + "-01").toLocaleString('default', { month: 'short' }));
-                annualChart.data.datasets[0].data = Object.values(annualData);
-                annualChart.update();
-                
-                document.getElementById('annualChartTitle').innerText = `📅 ${selectedYear} Annual Performance (${targetScopeUser.toUpperCase()})`;
-            }
+            renderProductTable();
+        } else {
+            document.getElementById('mainFilterSection').style.display = 'none';
+            document.getElementById('individualChartGrid').style.display = 'none';
+            document.getElementById('performanceGrid').style.display = 'none';
+            document.getElementById('productReportSection').style.display = 'none';
         }
 
         const filtered = isViewingAll ? monthlyData : monthlyData.filter(s => s.salesman === targetScopeUser);
@@ -1009,6 +1023,9 @@
                 const safeBill = escapeHTML(item.billNo);
                 const safeProduct = escapeHTML(item.product || 'N/A');
                 
+                // Allow user to delete if they are admin OR if they own the entry
+                const canDelete = isAdmin || item.salesman === currentUser;
+                
                 tbody.innerHTML += `<tr>
                     <td>${item.date}</td>
                     <td><span class="badge badge-bill">${safeBill}</span></td>
@@ -1017,14 +1034,11 @@
                     <td>${safeCustomer}</td>
                     ${isAdmin ? `<td style="text-transform:capitalize">${item.salesman}</td>` : ''}
                     <td style="${st !== 'Completed' ? 'text-decoration:line-through; color:#94a3b8;' : ''}">₹${formatINR(item.amount)}</td>
-                    <td class="delete-btn">${isAdmin ? `<button onclick="deleteEntry('${item.fireId}')" style="border:none; background:none; cursor:pointer;" title="Delete Record">🗑️</button>` : ''}</td>
+                    <td class="delete-btn">${canDelete ? `<button onclick="deleteEntry('${item.fireId}')" style="border:none; background:none; cursor:pointer; font-size:16px;" title="Delete Record">🗑️</button>` : ''}</td>
                 </tr>`;
             });
         }
 
-        document.getElementById('totalVal').innerText = `₹${formatINR(displayTotal)}`;
-        document.getElementById('gapVal').innerText = `₹${formatINR(Math.max(0, target - displayTotal))}`;
-        
         if(lineChart) {
             lineChart.data.labels = Object.keys(lineData); 
             lineChart.data.datasets[0].data = Object.values(lineData); 
@@ -1106,7 +1120,6 @@
         const pName = document.getElementById('newProductName').value.trim();
         if(!pName) return;
         
-        // Anti-Duplication Check
         const isDuplicate = availableProducts.some(p => p.name.toLowerCase() === pName.toLowerCase());
         if(isDuplicate) {
             alert("⚠️ This product already exists in the catalog!");
@@ -1133,8 +1146,6 @@
     }
 
     function populateProductDropdowns() {
-        // Just updates the Report Breakdown Filter now, 
-        // because input entry uses dynamic Custom Autocomplete.
         const reportSelect = document.getElementById('productReportItemFilter');
         if(reportSelect) {
             const currentReportVal = reportSelect.value;
