@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Pro Sales Tracker v3.9.6</title>
+    <title>Pro Sales Tracker v3.9.8</title>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -13,7 +13,6 @@
             --danger: #f43f5e; --admin: #8b5cf6; --warn: #f59e0b; 
         }
         
-        /* 1. GLASSMORPHISM BACKGROUND & BASE */
         body { 
             font-family: 'Inter', sans-serif; 
             background: linear-gradient(135deg, #e2e8f0, #e0e7ff, #f3e8ff); 
@@ -23,7 +22,6 @@
         }
         .container { max-width: 1100px; margin: auto; display: none; }
         
-        /* Glass Panel Reusable Class */
         .glass-panel {
             background: rgba(255, 255, 255, 0.7);
             backdrop-filter: blur(12px);
@@ -64,7 +62,6 @@
         @media (min-width: 768px) { .chart-grid.admin-mode { grid-template-columns: 1fr 1fr; } .chart-grid.split { grid-template-columns: 1fr 1fr; } }
         .chart-box { padding: 15px; height: 260px; }
         
-        /* 2. MOBILE-FIRST DARK GLASSMORPHISM FORM */
         .form-panel { 
             background: rgba(15, 23, 42, 0.75); 
             backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
@@ -73,35 +70,19 @@
             box-shadow: 0 10px 30px rgba(0,0,0,0.15);
         }
         
-        .form-panel label {
-            font-size: 11px; font-weight: bold; margin-bottom: 5px; display: block; color: #cbd5e1;
-        }
-
-        .form-grid {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            margin-bottom: 15px;
-        }
-        .form-grid-row {
-            display: flex;
-            gap: 15px;
-        }
-        .form-grid-row > div {
-            flex: 1;
-        }
+        .form-panel label { font-size: 11px; font-weight: bold; margin-bottom: 5px; display: block; color: #cbd5e1; }
+        .form-grid { display: flex; flex-direction: column; gap: 15px; margin-bottom: 15px; }
+        .form-grid-row { display: flex; gap: 15px; }
+        .form-grid-row > div { flex: 1; }
         
-        /* Transparent inputs for dark glass */
         .form-panel input, .form-panel select {
             background: rgba(255, 255, 255, 0.1);
             border: 1px solid rgba(255, 255, 255, 0.2);
-            color: white; font-size: 15px;
-            width: 100%; box-sizing: border-box;
+            color: white; font-size: 15px; width: 100%; box-sizing: border-box;
         }
         .form-panel input::placeholder { color: #cbd5e1; font-weight: normal; }
         .form-panel select option { color: #0f172a; }
 
-        /* CUSTOM AUTOCOMPLETE STYLES */
         .autocomplete-wrapper { flex: 2; position: relative; }
         .autocomplete-list {
             position: absolute; top: 100%; left: 0; right: 0;
@@ -117,18 +98,11 @@
         .autocomplete-list li:last-child { border-bottom: none; }
         .autocomplete-list li:hover, .autocomplete-list li:active { background: var(--accent); }
         
-        /* 3. THUMB-ZONE ERGONOMICS */
         .btn-add { background: var(--success); color: white; border: none; padding: 16px; border-radius: 12px; font-weight: bold; cursor: pointer; width: 100%; font-size: 16px; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3); transition: transform 0.1s; }
         .btn-add:active { transform: scale(0.98); }
         
         @media (max-width: 768px) {
-            .btn-add.thumb-btn {
-                width: 100%;
-                box-shadow: 0 8px 25px rgba(16, 185, 129, 0.5);
-                font-size: 18px;
-                padding: 18px;
-                margin-top: 10px;
-            }
+            .btn-add.thumb-btn { width: 100%; box-shadow: 0 8px 25px rgba(16, 185, 129, 0.5); font-size: 18px; padding: 18px; margin-top: 10px; }
         }
 
         .btn-danger { background: var(--danger); color: white; border: none; cursor: pointer; }
@@ -151,11 +125,10 @@
         @media (min-width: 768px) { .admin-manage-grid { grid-template-columns: 1fr 1fr; } }
         .salesman-list-item { display: flex; justify-content: space-between; align-items: center; padding: 8px; background: rgba(255,255,255,0.5); border-radius: 8px; margin-bottom: 6px; font-weight: 600; text-transform: capitalize; border: 1px solid rgba(255,255,255,0.8); }
         
-        /* --- PDF & PRINT A4 ENGINE --- */
         #printHeader { display: none; }
         @media print {
             @page { size: A4 portrait; margin: 15mm; }
-            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
+            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
             body { background: white !important; margin: 0; padding: 0; }
             .glass-panel { background: white !important; backdrop-filter: none !important; border: 1px solid #e2e8f0 !important; box-shadow: none !important; border-radius: 0 !important; }
             header button, #settingsPanel, .filter-section, .form-panel, .btn-action, .btn-danger, #loginOverlay, .delete-btn, .no-print, .thumb-btn { display: none !important; }
@@ -263,7 +236,6 @@
                 <input type="text" id="customer" placeholder="Enter Client Name" style="padding: 10px;">
             </div>
 
-            <!-- CUSTOM AUTOCOMPLETE LIST FORMAT WITH QTY -->
             <div>
                 <label>Products (List Format)</label>
                 <div id="productEntries">
@@ -311,13 +283,11 @@
         <div class="progress-bar-bg"><div id="progressBar"></div></div>
     </div>
 
-    <!-- MAIN CHARTS -->
     <div class="chart-grid" id="chartGrid">
         <div class="chart-box glass-panel"><canvas id="lineChart"></canvas></div>
         <div class="chart-box glass-panel" id="pieBox" style="display:none;"><canvas id="pieChart"></canvas></div>
     </div>
 
-    <!-- INDIVIDUAL RATIO CHARTS (ADMIN ONLY) -->
     <div class="chart-grid split" id="individualChartGrid" style="display:none;">
         <div class="chart-box glass-panel" style="height: 220px;">
             <h4 style="margin:0 0 5px 0; font-size:12px; text-align:center; color:#64748b;">💰 Revenue: Return Ratio</h4>
@@ -329,7 +299,6 @@
         </div>
     </div>
 
-    <!-- PERFORMANCE CHARTS (ADMIN ONLY) -->
     <div class="chart-grid split" id="performanceGrid" style="display:none; margin-bottom: 15px;">
         <div class="chart-box glass-panel" id="productChartBox" style="height: 260px;">
             <h4 id="productChartTitle" style="margin:0 0 5px 0; font-size:12px; text-align:center; color:#64748b;">📦 Top Products</h4>
@@ -341,7 +310,6 @@
         </div>
     </div>
 
-    <!-- ADMIN EXCLUSIVE REPORTS -->
     <div id="adminSection" style="display:none;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
             <h3 style="font-size: 15px; margin:0;">🏆 Monthly Leaderboard</h3>
@@ -377,7 +345,6 @@
         </div>
     </div>
 
-    <!-- UNIVERSAL PRODUCT REPORT (ADMIN ONLY) -->
     <div id="productReportSection" style="display:none; margin-top: 20px; margin-bottom: 20px;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:10px;">
             <h3 style="font-size: 15px; margin: 0;">📦 Detailed Product Breakdown</h3>
@@ -385,7 +352,6 @@
                 <select id="productReportSalesmanFilter" class="no-print glass-panel" onchange="renderProductTable()" style="width: auto; padding: 6px 10px; font-size: 13px;">
                     <option value="all">📊 All Team Data</option>
                 </select>
-                <!-- PRODUCT FILTER -->
                 <select id="productReportItemFilter" class="no-print glass-panel" onchange="renderProductTable()" style="width: auto; padding: 6px 10px; font-size: 13px;">
                     <option value="all">📦 All Products</option>
                 </select>
@@ -420,7 +386,7 @@
             <tbody id="tableBody"></tbody>
         </table>
     </div>
-    <div class="version-tag">Version 3.9.6 | Quantity & Breakdown Totals Patch</div>
+    <div class="version-tag">Version 3.9.8 | Stable Release Build</div>
 </div>
 
 <script>
@@ -435,9 +401,7 @@
         appId: "1:960783153617:web:9b9fa521836b9f5ef488f0"
     };
 
-    const USERS_DEFAULT = { 
-        "admin": { password: "admin789" } 
-    };
+    const USERS_DEFAULT = { "admin": { password: "admin789" } };
 
     const CHART_COLORS = ['#3b82f6', '#10b981', '#f43f5e', '#8b5cf6', '#f59e0b', '#06b6d4', '#ec4899', '#84cc16'];
     const STATUS_COLORS = ['#10b981', '#ef4444', '#64748b'];
@@ -560,7 +524,6 @@
         });
     }
 
-    /* CUSTOM AUTOCOMPLETE LOGIC */
     function filterDropdown(input) {
         const val = input.value.toLowerCase();
         const wrapper = input.parentElement;
@@ -588,9 +551,7 @@
 
     function hideDropdown(input) {
         const list = input.parentElement.querySelector('.autocomplete-list');
-        if(list) {
-            setTimeout(() => { list.style.display = 'none'; }, 200); 
-        }
+        if(list) { setTimeout(() => { list.style.display = 'none'; }, 200); }
     }
 
     function addProductRow(btn) {
@@ -638,15 +599,12 @@
             const pQtyText = row.querySelector('.prod-qty').value;
             const pQty = parseInt(pQtyText) || 1;
             
-            if (!rawName && pAmtText.trim() === '') {
-                return;
-            }
+            if (!rawName && pAmtText.trim() === '') return;
             
             if (!rawName || isNaN(pAmt) || pAmt <= 0 || pQty <= 0) {
                 hasError = true;
             } else {
                 const matchedProduct = availableProducts.find(p => p.name.toLowerCase() === rawName.toLowerCase());
-                
                 if(!matchedProduct) {
                     typoError = true;
                 } else {
@@ -665,15 +623,9 @@
 
         validDataToPush.forEach(item => {
             db.ref('sales').push({ 
-                salesman: entryUser, 
-                date: date, 
-                billNo: bill, 
-                product: item.name, 
-                customer: customer, 
-                status: 'Completed', 
-                amount: item.amount,
-                qty: item.qty,
-                timestamp: Date.now() 
+                salesman: entryUser, date: date, billNo: bill, 
+                product: item.name, customer: customer, status: 'Completed', 
+                amount: item.amount, qty: item.qty, timestamp: Date.now() 
             });
         });
 
@@ -700,9 +652,6 @@
         }
     }
 
-
-    /* ADMIN / REPORTS ENGINE */
-
     function populateAdminFilters() {
         const select = document.getElementById('salesmanFilter');
         if(select) {
@@ -725,8 +674,7 @@
             const currentProd = prodSelect.value;
             let prodHtml = `<option value="all">📊 All Team Breakdown</option>`;
             registeredSalesmen.forEach(s => prodHtml += `<option value="${s}">👤 ${s.toUpperCase()}</option>`);
-            prodSelect.innerHTML = prodHtml; 
-            prodSelect.value = currentProd || 'all';
+            prodSelect.innerHTML = prodHtml; prodSelect.value = currentProd || 'all';
         }
     }
 
@@ -787,9 +735,7 @@
             }
         });
         
-        let totalCompleted = 0;
-        let totalReturned = 0;
-        let totalNet = 0;
+        let totalCompleted = 0, totalReturned = 0, totalNet = 0;
 
         if (pFilter === 'all') {
             if(pThSalesman) pThSalesman.style.display = 'table-cell';
@@ -805,10 +751,7 @@
             });
             
             allEntries.sort((a,b) => a.salesman.localeCompare(b.salesman) || b.net - a.net).forEach(row => {
-                totalCompleted += row.completed;
-                totalReturned += row.returned;
-                totalNet += row.net;
-
+                totalCompleted += row.completed; totalReturned += row.returned; totalNet += row.net;
                 pBody.innerHTML += `<tr>
                     <td style="text-transform:capitalize;">${row.salesman}</td>
                     <td><strong>${escapeHTML(row.product)}</strong></td>
@@ -830,10 +773,7 @@
             });
             
             myEntries.sort((a,b) => b.net - a.net).forEach(row => {
-                totalCompleted += row.completed;
-                totalReturned += row.returned;
-                totalNet += row.net;
-
+                totalCompleted += row.completed; totalReturned += row.returned; totalNet += row.net;
                 pBody.innerHTML += `<tr>
                     <td><strong>${escapeHTML(row.product)}</strong></td>
                     <td style="color:var(--success);">₹${formatINR(row.completed)}</td>
@@ -843,7 +783,6 @@
             });
         }
 
-        // APPEND TOTAL SUMMARY ROW
         const colSpan = (pFilter === 'all') ? 2 : 1;
         pBody.innerHTML += `<tr style="background: rgba(241, 245, 249, 0.9); font-weight: bold; border-top: 2px solid #cbd5e1;">
             <td colspan="${colSpan}">TOTAL</td>
@@ -899,20 +838,19 @@
             if(status === 'Completed') {
                 teamTotal += item.amount;
                 pieData[item.salesman] = (pieData[item.salesman] || 0) + item.amount;
-                
                 if (isViewingAll || item.salesman === targetScopeUser) {
                     productData[prod] = (productData[prod] || 0) + item.amount;
                 }
             }
 
-            if(!isViewingAll && item.salesman === targetScopeUser) {
+            if(item.salesman === targetScopeUser) {
                 if(status === 'Completed') { completedAmt += item.amount; completedCount++; }
                 if(status === 'Returned') { returnedAmt += item.amount; returnedCount++; }
                 if(status === 'Cancelled') { cancelledCount++; }
             }
         });
 
-        const displayTotal = isViewingAll ? teamTotal : (pieData[targetScopeUser] || 0);
+        const displayTotal = isViewingAll ? teamTotal : completedAmt;
         const progPerc = Math.min(100, (displayTotal / target) * 100).toFixed(1);
         
         document.getElementById('progressBar').style.width = progPerc + '%';
@@ -952,9 +890,7 @@
                 allSales.filter(s => s.salesman === targetScopeUser && s.date.startsWith(selectedYear) && (s.status || 'Completed') === 'Completed')
                         .forEach(s => {
                             const m = s.date.slice(0, 7);
-                            if(annualData[m] !== undefined) {
-                                annualData[m] += s.amount;
-                            }
+                            if(annualData[m] !== undefined) annualData[m] += s.amount;
                         });
 
                 if(annualChart) {
@@ -1062,6 +998,9 @@
             });
         }
 
+        document.getElementById('totalVal').innerText = `₹${formatINR(displayTotal)}`;
+        document.getElementById('gapVal').innerText = `₹${formatINR(Math.max(0, target - displayTotal))}`;
+
         if(lineChart) {
             lineChart.data.labels = Object.keys(lineData); 
             lineChart.data.datasets[0].data = Object.values(lineData); 
@@ -1154,10 +1093,7 @@
         if(!pName) return;
         
         const isDuplicate = availableProducts.some(p => p.name.toLowerCase() === pName.toLowerCase());
-        if(isDuplicate) {
-            alert("⚠️ This product already exists in the catalog!");
-            return;
-        }
+        if(isDuplicate) { alert("⚠️ This product already exists in the catalog!"); return; }
 
         db.ref('products').push({ name: pName }).then(() => {
             document.getElementById('newProductName').value = '';
@@ -1221,11 +1157,7 @@
             annualChart = new Chart(document.getElementById('annualChart'), {
                 type: 'bar', 
                 data: { labels: [], datasets: [{ label: 'Completed Revenue (₹)', data: [], backgroundColor: '#8b5cf6', borderRadius: 4 }] },
-                options: { 
-                    maintainAspectRatio: false, 
-                    plugins: { legend: { display: false } },
-                    scales: { y: { beginAtZero: true } }
-                }
+                options: { maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
             });
         }
 
@@ -1233,12 +1165,7 @@
             productChart = new Chart(document.getElementById('productChart'), {
                 type: 'bar',
                 data: { labels: [], datasets: [{ label: 'Revenue (₹)', data: [], backgroundColor: '#0ea5e9', borderRadius: 4 }] },
-                options: {
-                    maintainAspectRatio: false,
-                    indexAxis: 'y',
-                    plugins: { legend: { display: false } },
-                    scales: { x: { beginAtZero: true } }
-                }
+                options: { maintainAspectRatio: false, indexAxis: 'y', plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true } } }
             });
         }
     }
