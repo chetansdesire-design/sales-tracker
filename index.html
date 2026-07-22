@@ -4,9 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Pro Sales Tracker v3.9.8</title>
+    
+    <!-- Firebase App (the core Firebase SDK) -->
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
+    <!-- Firebase Realtime Database -->
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
+    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
     <style>
         :root { 
             --primary: #0f172a; --accent: #3b82f6; --success: #10b981; 
@@ -32,10 +37,10 @@
         }
 
         #loginOverlay { position: fixed; inset: 0; background: var(--primary); display: flex; align-items: center; justify-content: center; z-index: 1000; }
-        .login-card { background: white; padding: 30px; border-radius: 20px; width: 90%; max-width: 380px; text-align: center; }
+        .login-card { background: white; padding: 30px; border-radius: 20px; width: 90%; max-width: 380px; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.2); }
         .login-card input, .settings-panel input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #e2e8f0; border-radius: 10px; box-sizing: border-box; font-size: 16px; }
         
-        .btn-login { width: 100%; padding: 14px; background: var(--accent); color: white; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; transition: opacity 0.2s; }
+        .btn-login { width: 100%; padding: 14px; background: var(--accent); color: white; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; transition: opacity 0.2s; font-size: 16px; }
         .btn-login:hover { opacity: 0.9; }
         
         header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding: 10px 0; }
@@ -59,8 +64,8 @@
         #progressBar { width: 0%; height: 100%; background: linear-gradient(90deg, var(--accent), var(--success)); transition: width 0.6s ease; }
         
         .chart-grid { display: grid; grid-template-columns: 1fr; gap: 15px; margin-bottom: 15px; }
-        @media (min-width: 768px) { .chart-grid.admin-mode { grid-template-columns: 1fr 1fr; } .chart-grid.split { grid-template-columns: 1fr 1fr; } }
-        .chart-box { padding: 15px; height: 260px; }
+        @media (min-width: 768px) { .chart-grid.admin-mode, .chart-grid.split { grid-template-columns: 1fr 1fr; } }
+        .chart-box { padding: 15px; height: 260px; display: flex; flex-direction: column; }
         
         .form-panel { 
             background: rgba(15, 23, 42, 0.75); 
@@ -83,47 +88,24 @@
         .form-panel input::placeholder { color: #cbd5e1; font-weight: normal; }
         .form-panel select option { color: #0f172a; }
 
-        .autocomplete-wrapper { flex: 2; position: relative; }
-        .autocomplete-list {
-            position: absolute; top: 100%; left: 0; right: 0;
-            background: #1e293b; border: 1px solid rgba(255,255,255,0.2);
-            border-radius: 8px; max-height: 180px; overflow-y: auto;
-            z-index: 1000; display: none; padding: 0; margin: 4px 0 0 0;
-            list-style: none; box-shadow: 0 8px 16px rgba(0,0,0,0.5);
-        }
-        .autocomplete-list li {
-            padding: 12px 15px; color: white; border-bottom: 1px solid rgba(255,255,255,0.1);
-            cursor: pointer; font-size: 14px; transition: background 0.1s;
-        }
-        .autocomplete-list li:last-child { border-bottom: none; }
-        .autocomplete-list li:hover, .autocomplete-list li:active { background: var(--accent); }
-        
         .btn-add { background: var(--success); color: white; border: none; padding: 16px; border-radius: 12px; font-weight: bold; cursor: pointer; width: 100%; font-size: 16px; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3); transition: transform 0.1s; }
         .btn-add:active { transform: scale(0.98); }
         
-        @media (max-width: 768px) {
-            .btn-add.thumb-btn { width: 100%; box-shadow: 0 8px 25px rgba(16, 185, 129, 0.5); font-size: 18px; padding: 18px; margin-top: 10px; }
-        }
-
-        .btn-danger { background: var(--danger); color: white; border: none; cursor: pointer; }
-        .btn-action { background: var(--accent); color: white; border: none; cursor: pointer; }
+        .btn-danger { background: var(--danger); color: white; border: none; cursor: pointer; border-radius: 6px; padding: 6px 12px; font-weight: 600;}
+        .btn-action { background: var(--accent); color: white; border: none; cursor: pointer; border-radius: 6px; padding: 6px 12px; font-weight: 600;}
         
         .table-wrap { overflow-x: auto; margin-bottom: 20px; }
         table { width: 100%; border-collapse: collapse; min-width: 750px; background: transparent; }
-        th { background: rgba(241, 245, 249, 0.6); padding: 12px; text-align: left; font-size: 11px; color: #475569; border-bottom: 2px solid #e2e8f0; }
+        th { background: rgba(241, 245, 249, 0.6); padding: 12px; text-align: left; font-size: 11px; color: #475569; border-bottom: 2px solid #e2e8f0; text-transform: uppercase; }
         td { padding: 12px; border-bottom: 1px solid rgba(226, 232, 240, 0.6); font-size: 13px; }
         
-        .badge { padding: 4px 8px; border-radius: 6px; font-size: 10px; font-weight: 700; }
-        .badge-bill { background: #e2e8f0; color: #475569; }
+        .badge { padding: 4px 8px; border-radius: 6px; font-size: 10px; font-weight: 700; text-transform: uppercase; }
         .badge-completed { background: #d1fae5; color: #065f46; }
-        .badge-returned { background: #fee2e2; color: #991b1b; }
-        .badge-cancelled { background: #f3f4f6; color: #374151; }
+        .badge-cancelled { background: #fee2e2; color: #991b1b; } 
 
         .settings-panel { display:none; padding: 20px; margin-bottom: 20px; }
-        .version-tag { font-size: 10px; color: #94a3b8; text-align: center; margin-top: 20px; padding-bottom: 40px; }
         .admin-manage-grid { display: grid; grid-template-columns: 1fr; gap: 20px; margin-top: 15px; border-top: 1px dashed #cbd5e1; padding-top: 15px; }
         @media (min-width: 768px) { .admin-manage-grid { grid-template-columns: 1fr 1fr; } }
-        .salesman-list-item { display: flex; justify-content: space-between; align-items: center; padding: 8px; background: rgba(255,255,255,0.5); border-radius: 8px; margin-bottom: 6px; font-weight: 600; text-transform: capitalize; border: 1px solid rgba(255,255,255,0.8); }
         
         #printHeader { display: none; }
         @media print {
@@ -131,15 +113,12 @@
             * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
             body { background: white !important; margin: 0; padding: 0; }
             .glass-panel { background: white !important; backdrop-filter: none !important; border: 1px solid #e2e8f0 !important; box-shadow: none !important; border-radius: 0 !important; }
-            header button, #settingsPanel, .filter-section, .form-panel, .btn-action, .btn-danger, #loginOverlay, .delete-btn, .no-print, .thumb-btn { display: none !important; }
+            header button, #settingsPanel, .filter-section, .form-panel, .btn-action, .btn-danger, #loginOverlay, .no-print { display: none !important; }
             #printHeader { display: block !important; text-align: center; margin-bottom: 20px; font-family: sans-serif; }
-            #printHeader h1 { margin: 0; font-size: 24px; color: var(--primary); }
-            #printHeader p { margin: 5px 0 0 0; color: #64748b; font-size: 14px; }
-            .container, #mainApp, .table-wrap { display: block !important; width: 100% !important; max-width: 100% !important; margin: 0 !important; overflow: visible !important; box-shadow: none !important; }
-            .chart-box { page-break-inside: avoid; border: 1px solid #e2e8f0; box-shadow: none !important; }
-            table { width: 100% !important; page-break-inside: auto; border: 1px solid #e2e8f0; }
-            tr { page-break-inside: avoid; page-break-after: auto; }
-            td, th { page-break-inside: avoid; border-bottom: 1px solid #e2e8f0; }
+            .container { display: block !important; max-width: 100% !important; margin: 0 !important; }
+            table { width: 100% !important; border: 1px solid #e2e8f0; }
+            td, th { border-bottom: 1px solid #e2e8f0; }
+            .chart-box { page-break-inside: avoid; border: 1px solid #e2e8f0; }
         }
     </style>
 </head>
@@ -147,9 +126,9 @@
 
 <div id="loginOverlay">
     <div class="login-card">
-        <h2 style="margin:0 0 20px 0;">Team Sales Portal</h2>
-        <input type="text" id="loginUser" placeholder="Username">
-        <input type="password" id="loginPass" placeholder="Password">
+        <h2 style="margin:0 0 20px 0; color: var(--primary);">Team Sales Portal</h2>
+        <input type="text" id="loginUser" placeholder="Username (e.g. admin or user1)">
+        <input type="password" id="loginPass" placeholder="Password (any for demo)">
         <button class="btn-login" onclick="handleLogin()">Sign In</button>
     </div>
 </div>
@@ -162,8 +141,11 @@
     </div>
 
     <header>
-        <div><h2 id="welcomeName" style="margin:0;">Hi</h2><span id="roleBadge" class="badge badge-bill">Sales Team</span></div>
-        <div style="display:flex; gap:15px; align-items:center;">
+        <div>
+            <h2 id="welcomeName" style="margin:0;">Dashboard</h2>
+            <span id="roleBadge" class="badge badge-completed">Sales Team</span>
+        </div>
+        <div style="display:flex; gap:15px; align-items:center;" class="no-print">
             <button onclick="toggleSettings()" style="cursor:pointer; border:none; background:none; font-size: 20px;" title="Settings">⚙️</button>
             <button onclick="handleLogout()" style="cursor:pointer; border:none; background:none; color:var(--danger); font-weight:bold;">Logout</button>
         </div>
@@ -171,41 +153,14 @@
 
     <div id="settingsPanel" class="settings-panel glass-panel">
         <h3 style="margin-top:0; font-size: 16px;">Account Settings</h3>
-        <div style="position: relative; max-width: 320px;">
-            <input type="password" id="newPass" placeholder="Enter New Password">
-            <span onclick="togglePassView()" id="eyeIcon" style="position: absolute; right: 10px; top: 22px; cursor: pointer;">👁️</span>
-            <button class="btn-login" onclick="updatePassword()" style="margin-top: 10px; padding: 10px;">Update Password</button>
-        </div>
-
-        <div id="adminManagementSection" style="display: none;" class="admin-manage-grid">
-            <div>
-                <h4 style="margin: 0 0 10px 0; color: var(--admin);">➕ Add New Salesman</h4>
-                <input type="text" id="newSalesmanUser" placeholder="Username (lowercase)">
-                <input type="password" id="newSalesmanPass" placeholder="Password">
-                <button class="btn-login" onclick="addSalesman()" style="background: var(--admin); padding: 10px; margin-top: 5px;">Register User</button>
-            </div>
-            <div>
-                <h4 style="margin: 0 0 10px 0; color: var(--danger);">👥 Manage Sales Team</h4>
-                <div id="salesmenListContainer" style="max-height: 180px; overflow-y: auto; border: 1px solid rgba(0,0,0,0.1); padding: 10px; border-radius: 10px; background: rgba(255,255,255,0.4);"></div>
-            </div>
-        </div>
-
+        <p style="font-size: 12px; color: #64748b;">(Settings mocked for template)</p>
         <div id="adminConfigSection" class="admin-manage-grid" style="display: none;">
             <div>
-                <h4 style="margin: 0 0 10px 0; color: var(--warn);">🎯 Set Monthly Target (Per User)</h4>
+                <h4 style="margin: 0 0 10px 0; color: var(--warn);">🎯 Set Monthly Target</h4>
                 <div style="display: flex; gap: 10px;">
                     <input type="number" id="newTargetInput" placeholder="Enter Target ₹" style="padding: 10px;">
-                    <button class="btn-login" onclick="updateGlobalTarget()" style="background: var(--warn); width: auto; padding: 10px 20px;">Update</button>
+                    <button class="btn-login" style="background: var(--warn); width: auto; padding: 10px 20px;">Update</button>
                 </div>
-            </div>
-            
-            <div>
-                <h4 style="margin: 0 0 10px 0; color: var(--success);">📦 Manage Product Catalog</h4>
-                <div style="display: flex; gap: 10px;">
-                    <input type="text" id="newProductName" placeholder="New Product Name" style="padding: 10px;">
-                    <button class="btn-login" onclick="addNewProduct()" style="background: var(--success); width: auto; padding: 10px 20px;">Add</button>
-                </div>
-                <div id="productListContainer" style="max-height: 150px; overflow-y: auto; border: 1px solid rgba(0,0,0,0.1); padding: 10px; border-radius: 10px; margin-top: 10px; background: rgba(255,255,255,0.4);"></div>
             </div>
         </div>
     </div>
@@ -217,7 +172,10 @@
         <div class="form-grid">
             <div id="adminSalesmanSelectContainer" style="display: none;">
                 <label>Log Sale For:</label>
-                <select id="entrySalesman" style="font-weight: bold; font-size: 14px; padding: 10px;"></select>
+                <select id="entrySalesman" style="font-weight: bold; font-size: 14px; padding: 10px;">
+                    <option value="user1">User 1</option>
+                    <option value="user2">User 2</option>
+                </select>
             </div>
             
             <div class="form-grid-row">
@@ -237,940 +195,563 @@
             </div>
 
             <div>
-                <label>Products (List Format)</label>
+                <label>Products</label>
                 <div id="productEntries">
                     <div class="product-entry-row" style="display: flex; gap: 8px; margin-bottom: 10px;">
-                        <div class="autocomplete-wrapper">
-                            <input type="text" class="prod-name" placeholder="Search/Select..." autocomplete="off" style="padding: 10px;" oninput="filterDropdown(this)" onfocus="filterDropdown(this)" onblur="hideDropdown(this)">
-                            <ul class="autocomplete-list"></ul>
-                        </div>
-                        <input type="number" class="prod-qty" placeholder="Qty" value="1" style="width: 70px; padding: 10px; font-size: 14px; box-sizing:border-box;">
-                        <input type="number" class="prod-amount" placeholder="₹ Amt" style="flex: 1; padding: 10px; font-size: 14px; width:100%; box-sizing:border-box;">
-                        <button class="btn-action" style="padding: 0 12px; font-size: 16px; border-radius: 8px;" onclick="addProductRow(this)">➕</button>
+                        <input type="text" class="prod-name" placeholder="Product Name" style="flex: 2; padding: 10px; box-sizing:border-box;">
+                        <input type="number" class="prod-qty" placeholder="Qty" value="1" min="1" style="width: 70px; padding: 10px; font-size: 14px; box-sizing:border-box;">
+                        <input type="number" class="prod-amount" placeholder="₹ Total Amt" style="flex: 1; padding: 10px; font-size: 14px; box-sizing:border-box;">
+                        <button class="btn-action" style="padding: 0 12px; font-size: 16px;" onclick="addProductRow()">➕</button>
                     </div>
                 </div>
             </div>
         </div>
 
-        <button class="btn-add thumb-btn" onclick="addBillEntries()">Submit Full Bill</button>
+        <button class="btn-add" onclick="addBillEntries()">Submit Final Bill</button>
     </div>
 
-    <!-- FILTER SECTION (ADMIN ONLY) -->
-    <div class="filter-section glass-panel" id="mainFilterSection" style="display: none;">
+    <!-- FILTERS -->
+    <div class="filter-section glass-panel" id="mainFilterSection">
         <div class="filter-box">
             <label style="font-size: 10px; color: #64748b; font-weight: 800; display:block; margin-bottom:5px;">MONTH</label>
-            <select id="monthFilter" onchange="runUpdateUI()"></select>
+            <select id="monthFilter" onchange="runUpdateUI()">
+                <option value="all">All Time</option>
+            </select>
         </div>
         <div class="filter-box" id="adminUserFilterBox" style="display: none;">
-            <label style="font-size: 10px; color: #64748b; font-weight: 800; display:block; margin-bottom:5px;">DASHBOARD FILTER</label>
+            <label style="font-size: 10px; color: #64748b; font-weight: 800; display:block; margin-bottom:5px;">TEAM MEMBER</label>
             <select id="salesmanFilter" onchange="runUpdateUI()">
                 <option value="all">📊 All Team Data</option>
+                <option value="user1">User 1</option>
+                <option value="user2">User 2</option>
             </select>
         </div>
     </div>
 
+    <!-- STATS -->
     <div class="stats-grid">
         <div class="stat-card glass-panel"><h3>Target</h3><p id="targetValText">₹10L</p></div>
-        <div class="stat-card glass-panel"><h3><span id="statTitle">Achieved</span></h3><p id="totalVal" style="color: var(--success);">₹0</p></div>
+        <div class="stat-card glass-panel"><h3>Achieved</h3><p id="totalVal" style="color: var(--success);">₹0</p></div>
         <div class="stat-card glass-panel"><h3>Gap</h3><p id="gapVal" style="color: var(--danger);">₹10L</p></div>
     </div>
 
     <div class="progress-container glass-panel">
         <div style="display:flex; justify-content:space-between; font-size:12px; font-weight:bold; color:#475569;">
-            <span id="progLabel">Target Progress</span>
+            <span>Target Progress</span>
             <span id="progressPercent">0%</span>
         </div>
         <div class="progress-bar-bg"><div id="progressBar"></div></div>
     </div>
 
-    <div class="chart-grid" id="chartGrid">
-        <div class="chart-box glass-panel"><canvas id="lineChart"></canvas></div>
-        <div class="chart-box glass-panel" id="pieBox" style="display:none;"><canvas id="pieChart"></canvas></div>
+    <!-- CHARTS -->
+    <div class="chart-grid split">
+        <div class="chart-box glass-panel">
+            <h4 style="margin:0 0 10px 0; font-size:12px; text-align:center; color:#64748b;">📈 Revenue Trend</h4>
+            <div style="flex: 1; position: relative;"><canvas id="lineChart"></canvas></div>
+        </div>
+        <div class="chart-box glass-panel">
+            <h4 style="margin:0 0 10px 0; font-size:12px; text-align:center; color:#64748b;">📦 Top Products (Qty Sold)</h4>
+            <div style="flex: 1; position: relative;"><canvas id="productChart"></canvas></div>
+        </div>
     </div>
 
-    <div class="chart-grid split" id="individualChartGrid" style="display:none;">
-        <div class="chart-box glass-panel" style="height: 220px;">
-            <h4 style="margin:0 0 5px 0; font-size:12px; text-align:center; color:#64748b;">💰 Revenue: Return Ratio</h4>
-            <div style="height: 180px;"><canvas id="returnPieChart"></canvas></div>
-        </div>
+    <div class="chart-grid" style="grid-template-columns: 1fr; max-width: 500px; margin: 0 auto 20px auto;">
         <div class="chart-box glass-panel" style="height: 220px;">
             <h4 style="margin:0 0 5px 0; font-size:12px; text-align:center; color:#64748b;">📄 Bills: Status Ratio</h4>
-            <div style="height: 180px;"><canvas id="billPieChart"></canvas></div>
+            <div style="flex: 1; position: relative;"><canvas id="billPieChart"></canvas></div>
         </div>
     </div>
 
-    <div class="chart-grid split" id="performanceGrid" style="display:none; margin-bottom: 15px;">
-        <div class="chart-box glass-panel" id="productChartBox" style="height: 260px;">
-            <h4 id="productChartTitle" style="margin:0 0 5px 0; font-size:12px; text-align:center; color:#64748b;">📦 Top Products</h4>
-            <div style="height: 220px;"><canvas id="productChart"></canvas></div>
-        </div>
-        <div class="chart-box glass-panel" id="annualChartBox" style="display:none; height: 260px;">
-            <h4 id="annualChartTitle" style="margin:0 0 5px 0; font-size:12px; text-align:center; color:#64748b;">📅 Annual Performance</h4>
-            <div style="height: 220px;"><canvas id="annualChart"></canvas></div>
-        </div>
-    </div>
-
+    <!-- ADMIN SECTIONS -->
     <div id="adminSection" style="display:none;">
+        
+        <!-- Leaderboard -->
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
             <h3 style="font-size: 15px; margin:0;">🏆 Monthly Leaderboard</h3>
-            <div style="display:flex; gap:5px;">
-                <button onclick="triggerPrint()" class="btn-action" style="background:#475569; padding: 8px 15px;">📄 Print</button>
-                <button onclick="exportToCSV()" class="btn-action" style="padding: 8px 15px;">📥 CSV</button>
-                <button class="btn-danger" onclick="clearAllData()" style="padding: 8px 15px;">🗑️ Reset</button>
-            </div>
+            <button onclick="window.print()" class="btn-action no-print" style="background:#475569;">📄 Print</button>
         </div>
         <div class="table-wrap glass-panel">
             <table>
-                <thead><tr><th>Rank</th><th>Salesman</th><th style="text-align:right">Monthly Rev (Completed)</th></tr></thead>
+                <thead>
+                    <tr>
+                        <th>Rank</th>
+                        <th>Salesman</th>
+                        <th style="text-align:center">Total Qty</th>
+                        <th style="text-align:right">Revenue (Completed)</th>
+                    </tr>
+                </thead>
                 <tbody id="leaderboardBody"></tbody>
             </table>
         </div>
         
-        <div id="detailedReportSection">
-            <h3 style="font-size: 15px; margin: 20px 0 10px 0;">👥 Salesman-wise Monthly Report</h3>
-            <div class="table-wrap glass-panel">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Salesman</th>
-                            <th>Completed (₹)</th>
-                            <th>Returned (₹)</th>
-                            <th>Cancelled (Qty)</th>
-                            <th>Target Achieved</th>
-                        </tr>
-                    </thead>
-                    <tbody id="salesmanReportBody"></tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-
-    <div id="productReportSection" style="display:none; margin-top: 20px; margin-bottom: 20px;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:10px;">
-            <h3 style="font-size: 15px; margin: 0;">📦 Detailed Product Breakdown</h3>
-            <div style="display:flex; gap: 10px;">
-                <select id="productReportSalesmanFilter" class="no-print glass-panel" onchange="renderProductTable()" style="width: auto; padding: 6px 10px; font-size: 13px;">
-                    <option value="all">📊 All Team Data</option>
-                </select>
-                <select id="productReportItemFilter" class="no-print glass-panel" onchange="renderProductTable()" style="width: auto; padding: 6px 10px; font-size: 13px;">
-                    <option value="all">📦 All Products</option>
-                </select>
-            </div>
-        </div>
+        <!-- Detailed Report -->
+        <h3 style="font-size: 15px; margin: 20px 0 10px 0;">👥 Salesman-wise Detailed Report</h3>
         <div class="table-wrap glass-panel">
             <table>
-                <thead id="productReportHead">
+                <thead>
                     <tr>
-                        <th id="thProdSalesman" style="display:none;">Salesman</th>
-                        <th>Product Name</th>
-                        <th>Completed Revenue (₹)</th>
-                        <th>Returned (₹)</th>
-                        <th>Net Revenue (₹)</th>
+                        <th>Salesman</th>
+                        <th>Total Bills</th>
+                        <th>Total Qty Sold</th>
+                        <th>Target</th>
+                        <th>Revenue (Completed)</th>
                     </tr>
                 </thead>
-                <tbody id="productReportBody"></tbody>
+                <tbody id="detailedReportBody"></tbody>
             </table>
         </div>
     </div>
 
-    <h3 style="font-size: 15px; margin: 10px 5px;">Transaction History</h3>
-    <div class="table-wrap glass-panel">
-        <table id="salesTable">
-            <thead>
-                <tr>
-                    <th>Date</th><th>Bill No</th><th>Product</th><th>Status</th><th>Customer</th>
-                    <th id="thUser" style="display:none;">Salesman</th>
-                    <th>Amount</th><th class="delete-btn"></th>
-                </tr>
-            </thead>
-            <tbody id="tableBody"></tbody>
-        </table>
+    <!-- RECENT ACTIVITY (ALL USERS) -->
+    <div id="recentActivitySection" style="margin-top: 20px;">
+        <h3 style="font-size: 15px; margin: 0 0 10px 0;">🕒 Recent Logged Bills</h3>
+        <div class="table-wrap glass-panel">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Bill No.</th>
+                        <th>Customer</th>
+                        <th style="text-align:center">Total Qty</th>
+                        <th>Total Amount</th>
+                        <th>Status</th>
+                        <th class="no-print">Action</th>
+                    </tr>
+                </thead>
+                <tbody id="recentBillsBody"></tbody>
+            </table>
+        </div>
     </div>
-    <div class="version-tag">Version 3.9.8 | Stable Release Build</div>
+
+    <div style="font-size: 10px; color: #94a3b8; text-align: center; margin-top: 20px; padding-bottom: 40px;">
+        Pro Sales Tracker v3.9.8 &copy; 2026
+    </div>
+
 </div>
 
+<!-- APPLICATION LOGIC -->
 <script>
-    let INDIVIDUAL_TARGET = 1000000; 
-    let availableProducts = [];
-    
+    // --- FIREBASE CONFIGURATION (Uncomment and add details to use live DB) ---
+    /*
     const firebaseConfig = {
-        apiKey: "AIzaSyCkciiLP3SIrK1yNNqhs1JtlCc_c55YOOY",
-        authDomain: "sales-tracker-27660.app",
-        databaseURL: "https://sales-tracker-27660-default-rtdb.firebaseio.com/",
-        projectId: "sales-tracker-27660",
-        appId: "1:960783153617:web:9b9fa521836b9f5ef488f0"
+        apiKey: "YOUR_API_KEY",
+        authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+        databaseURL: "https://YOUR_PROJECT_ID.firebaseio.com",
+        projectId: "YOUR_PROJECT_ID",
+        storageBucket: "YOUR_PROJECT_ID.appspot.com",
+        messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+        appId: "YOUR_APP_ID"
     };
-
-    const USERS_DEFAULT = { "admin": { password: "admin789" } };
-
-    const CHART_COLORS = ['#3b82f6', '#10b981', '#f43f5e', '#8b5cf6', '#f59e0b', '#06b6d4', '#ec4899', '#84cc16'];
-    const STATUS_COLORS = ['#10b981', '#ef4444', '#64748b'];
-
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
-    let currentUser = localStorage.getItem('activeUser');
-    let allSales = [];
-    let registeredSalesmen = []; 
-    let lineChart, pieChart, returnPieChart, billPieChart, annualChart, productChart;
+    */
 
-    function escapeHTML(str) {
-        if (!str) return '';
-        return str.replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag));
-    }
+    // --- STATE MANAGEMENT ---
+    let currentUser = null;
+    let isAdmin = false;
+    let globalTarget = 1000000; // ₹10,00,000 target per user
+    let billsData = []; // Main array holding all bill objects
+    let chartInstances = {}; // Store charts to destroy them before redrawing
 
-    window.onload = () => {
-        initDatabaseSync();
-        if(currentUser) showApp(); 
-    };
+    // Set today's date in input on load
+    document.getElementById('date').valueAsDate = new Date();
 
-    document.addEventListener("visibilitychange", () => {
-        if (document.visibilityState === 'hidden' && currentUser) handleLogout();
-    });
-
-    function initDatabaseSync() {
-        db.ref('userConfigs').once('value', (snapshot) => {
-            let data = snapshot.val() || {};
-            let updates = {}; let missingUser = false;
-            Object.keys(USERS_DEFAULT).forEach(key => {
-                if (!data[key]) { updates[key] = USERS_DEFAULT[key]; missingUser = true; }
-            });
-            if (missingUser) db.ref('userConfigs').update(updates);
-        });
-
-        db.ref('userConfigs').on('value', (snapshot) => {
-            const data = snapshot.val() || {};
-            const activeData = Object.keys(data).length > 0 ? data : USERS_DEFAULT;
-            registeredSalesmen = Object.keys(activeData).filter(user => user !== 'admin');
-            
-            if(currentUser === 'admin') {
-                renderSalesmenManagementList();
-                populateAdminFilters();
-            }
-            if(currentUser) runUpdateUI();
-        });
-
-        db.ref('settings/individualTarget').on('value', snap => {
-            if(snap.exists()) {
-                INDIVIDUAL_TARGET = snap.val();
-                if(document.getElementById('newTargetInput')) {
-                    document.getElementById('newTargetInput').value = INDIVIDUAL_TARGET;
-                }
-                if(currentUser) runUpdateUI();
-            }
-        });
-
-        db.ref('products').on('value', snap => {
-            const data = snap.val() || {};
-            availableProducts = Object.keys(data).map(k => ({ id: k, name: data[k].name }));
-            if(currentUser === 'admin') renderProductList();
-            populateProductDropdowns(); 
-        });
-    }
-
-    async function handleLogin() {
-        const u = document.getElementById('loginUser').value.toLowerCase().trim();
-        const p = document.getElementById('loginPass').value;
-        const snapshot = await db.ref(`userConfigs/${u}`).once('value');
-        const userData = snapshot.val();
-        const dbPassword = (userData && typeof userData === 'object') ? userData.password : userData;
+    // --- AUTHENTICATION MOCK ---
+    function handleLogin() {
+        const user = document.getElementById('loginUser').value.trim().toLowerCase();
+        if (!user) return alert("Enter a username");
         
-        if(dbPassword && dbPassword === p) {
-            currentUser = u;
-            localStorage.setItem('activeUser', u);
-            showApp();
-        } else { alert("Invalid Credentials"); }
-    }
-
-    function showApp() {
+        currentUser = user;
+        isAdmin = (user === 'admin');
+        
         document.getElementById('loginOverlay').style.display = 'none';
         document.getElementById('mainApp').style.display = 'block';
-        document.getElementById('welcomeName').innerText = `Hi, ${currentUser}`;
         
-        const localDate = new Date(); localDate.setMinutes(localDate.getMinutes() - localDate.getTimezoneOffset());
-        document.getElementById('date').value = localDate.toISOString().slice(0,10);
-        
-        if(currentUser === 'admin') {
-            document.getElementById('thUser').style.display = 'table-cell';
-            document.getElementById('roleBadge').innerText = "Administrator";
-            document.getElementById('roleBadge').style.background = "var(--admin)";
-            document.getElementById('roleBadge').style.color = "white";
-            document.getElementById('pieBox').style.display = 'block';
+        document.getElementById('welcomeName').innerText = isAdmin ? 'Admin Dashboard' : `Welcome, ${user}`;
+        document.getElementById('roleBadge').innerText = isAdmin ? 'Admin' : 'Sales Team';
+        document.getElementById('roleBadge').style.background = isAdmin ? 'var(--admin)' : 'var(--accent)';
+        document.getElementById('roleBadge').style.color = 'white';
+
+        if (isAdmin) {
             document.getElementById('adminSection').style.display = 'block';
-            document.getElementById('adminManagementSection').style.display = 'grid';
-            document.getElementById('adminConfigSection').style.display = 'grid';
             document.getElementById('adminUserFilterBox').style.display = 'block';
-            document.getElementById('adminSalesmanSelectContainer').style.display = 'block'; 
-            document.getElementById('chartGrid').classList.add('admin-mode');
-            renderSalesmenManagementList(); 
-            populateAdminFilters();
-        } else {
-            const prodSelect = document.getElementById('productReportSalesmanFilter');
-            if(prodSelect) {
-                prodSelect.innerHTML = `<option value="${currentUser}">👤 ${currentUser.toUpperCase()}</option>`;
-                prodSelect.value = currentUser;
-                prodSelect.disabled = true;
-            }
-            document.getElementById('mainFilterSection').style.display = 'none';
-            document.getElementById('individualChartGrid').style.display = 'none';
-            document.getElementById('performanceGrid').style.display = 'none';
-            document.getElementById('productReportSection').style.display = 'none';
+            document.getElementById('adminSalesmanSelectContainer').style.display = 'block';
+            document.getElementById('adminConfigSection').style.display = 'grid';
         }
-        
-        initCharts();
-        db.ref('sales').on('value', (snapshot) => {
-            const data = snapshot.val();
-            allSales = data ? Object.entries(data).map(([key, val]) => ({...val, fireId: key})) : [];
-            updateMonthDropdown(); runUpdateUI();
-        });
+
+        // Mock load data (Replace with firebase `.on('value')` listener)
+        loadMockData();
     }
 
-    function filterDropdown(input) {
-        const val = input.value.toLowerCase();
-        const wrapper = input.parentElement;
-        let list = wrapper.querySelector('.autocomplete-list');
-        list.innerHTML = ''; 
+    function handleLogout() {
+        currentUser = null;
+        isAdmin = false;
+        document.getElementById('mainApp').style.display = 'none';
+        document.getElementById('loginOverlay').style.display = 'flex';
         
-        const matches = val ? availableProducts.filter(p => p.name.toLowerCase().includes(val)) : availableProducts;
-        
-        if(matches.length > 0) {
-            matches.forEach(p => {
-                const li = document.createElement('li');
-                li.innerText = p.name;
-                li.onmousedown = function(e) {
-                    e.preventDefault(); 
-                    input.value = p.name;
-                    list.style.display = 'none';
-                };
-                list.appendChild(li);
-            });
-            list.style.display = 'block';
-        } else {
-            list.style.display = 'none';
-        }
+        // Hide Admin elements
+        document.getElementById('adminSection').style.display = 'none';
+        document.getElementById('adminUserFilterBox').style.display = 'none';
+        document.getElementById('adminSalesmanSelectContainer').style.display = 'none';
+        document.getElementById('adminConfigSection').style.display = 'none';
     }
 
-    function hideDropdown(input) {
-        const list = input.parentElement.querySelector('.autocomplete-list');
-        if(list) { setTimeout(() => { list.style.display = 'none'; }, 200); }
+    function toggleSettings() {
+        const panel = document.getElementById('settingsPanel');
+        panel.style.display = (panel.style.display === 'none' || panel.style.display === '') ? 'block' : 'none';
     }
 
-    function addProductRow(btn) {
-        btn.style.display = 'none';
-        btn.outerHTML = `<button class="btn-danger" style="padding: 0 12px; font-size: 16px; border-radius: 8px;" onclick="this.parentElement.remove()" title="Remove">❌</button>`;
-        
+    // --- DYNAMIC FORM LOGIC ---
+    function addProductRow() {
         const container = document.getElementById('productEntries');
-        container.insertAdjacentHTML('beforeend', `
-            <div class="product-entry-row" style="display: flex; gap: 8px; margin-bottom: 10px;">
-                <div class="autocomplete-wrapper">
-                    <input type="text" class="prod-name" placeholder="Search/Select..." autocomplete="off" style="padding: 10px;" oninput="filterDropdown(this)" onfocus="filterDropdown(this)" onblur="hideDropdown(this)">
-                    <ul class="autocomplete-list"></ul>
-                </div>
-                <input type="number" class="prod-qty" placeholder="Qty" value="1" style="width: 70px; padding: 10px; font-size: 14px; box-sizing:border-box;">
-                <input type="number" class="prod-amount" placeholder="₹ Amt" style="flex: 1; padding: 10px; font-size: 14px; width:100%; box-sizing:border-box;">
-                <button class="btn-action" style="padding: 0 12px; font-size: 16px; border-radius: 8px;" onclick="addProductRow(this)">➕</button>
-            </div>
-        `);
+        const row = document.createElement('div');
+        row.className = 'product-entry-row';
+        row.style = 'display: flex; gap: 8px; margin-bottom: 10px;';
+        row.innerHTML = `
+            <input type="text" class="prod-name" placeholder="Product Name" style="flex: 2; padding: 10px; box-sizing:border-box;">
+            <input type="number" class="prod-qty" placeholder="Qty" value="1" min="1" style="width: 70px; padding: 10px; font-size: 14px; box-sizing:border-box;">
+            <input type="number" class="prod-amount" placeholder="₹ Total Amt" style="flex: 1; padding: 10px; font-size: 14px; box-sizing:border-box;">
+            <button class="btn-danger" style="padding: 0 12px; font-size: 16px;" onclick="this.parentElement.remove()">❌</button>
+        `;
+        container.appendChild(row);
     }
 
+    // --- DATA ENTRY (SINGLE LINE LOGIC) ---
     function addBillEntries() {
         const date = document.getElementById('date').value;
-        const bill = document.getElementById('billNo').value.trim();
+        const billNo = document.getElementById('billNo').value.trim();
         const customer = document.getElementById('customer').value.trim();
-        
-        if(!date || !bill || !customer) {
-            return alert("⚠️ Please fill out Date, Bill No., and Customer Name.");
-        }
-        
-        let entryUser = currentUser;
-        if (currentUser === 'admin') {
-            const entrySelect = document.getElementById('entrySalesman');
-            if(entrySelect) entryUser = entrySelect.value;
-        }
+        const salesman = isAdmin ? document.getElementById('entrySalesman').value : currentUser;
 
-        const rows = document.querySelectorAll('.product-entry-row');
-        let validDataToPush = [];
-        let hasError = false;
-        let typoError = false;
+        if (!date || !billNo || !customer) return alert("Please fill Date, Bill No, and Customer Name.");
 
-        rows.forEach(row => {
-            const rawName = row.querySelector('.prod-name').value.trim();
-            const pAmtText = row.querySelector('.prod-amount').value;
-            const pAmt = parseFloat(pAmtText);
-            const pQtyText = row.querySelector('.prod-qty').value;
-            const pQty = parseInt(pQtyText) || 1;
+        let totalQty = 0;
+        let totalAmount = 0;
+        let productsList = [];
+
+        // Loop through dynamic rows
+        document.querySelectorAll('.product-entry-row').forEach(row => {
+            const name = row.querySelector('.prod-name').value.trim();
+            const qty = parseInt(row.querySelector('.prod-qty').value) || 0;
+            const amt = parseFloat(row.querySelector('.prod-amount').value) || 0;
             
-            if (!rawName && pAmtText.trim() === '') return;
-            
-            if (!rawName || isNaN(pAmt) || pAmt <= 0 || pQty <= 0) {
-                hasError = true;
-            } else {
-                const matchedProduct = availableProducts.find(p => p.name.toLowerCase() === rawName.toLowerCase());
-                if(!matchedProduct) {
-                    typoError = true;
-                } else {
-                    validDataToPush.push({ name: matchedProduct.name, amount: pAmt, qty: pQty });
-                }
+            if (name && qty > 0 && amt > 0) {
+                productsList.push({ name, qty, amount: amt });
+                totalQty += qty;
+                totalAmount += amt;
             }
         });
 
-        if (typoError) {
-            return alert("⚠️ Validation Failed: One of the products entered does not match the catalog. Please select products directly from the dropdown list.");
-        }
+        if (productsList.length === 0) return alert("Please add at least one complete product (Name, Qty, Amt).");
 
-        if (hasError || validDataToPush.length === 0) {
-            return alert("⚠️ Validation Failed: Every submitted product row must have a valid product name, quantity, and an amount greater than 0.");
-        }
+        const newBill = {
+            id: Date.now().toString(),
+            date: date,
+            billNo: billNo,
+            customer: customer,
+            salesman: salesman,
+            totalQty: totalQty,
+            totalAmount: totalAmount,
+            products: productsList,
+            status: "completed" // Removed 'returned' entirely
+        };
 
-        validDataToPush.forEach(item => {
-            db.ref('sales').push({ 
-                salesman: entryUser, date: date, billNo: bill, 
-                product: item.name, customer: customer, status: 'Completed', 
-                amount: item.amount, qty: item.qty, timestamp: Date.now() 
-            });
-        });
-
+        // Firebase Sync (Uncomment to use)
+        // db.ref('bills').push(newBill);
+        
+        // Local Save
+        billsData.push(newBill);
+        updateMonthFilterOptions();
+        runUpdateUI();
+        alert(`Bill ${billNo} saved! Total Amount: ₹${totalAmount}`);
+        
+        // Reset Form
         document.getElementById('billNo').value = '';
         document.getElementById('customer').value = '';
-        
-        const pContainer = document.getElementById('productEntries');
-        pContainer.innerHTML = `
-            <div class="product-entry-row" style="display: flex; gap: 8px; margin-bottom: 10px;">
-                <div class="autocomplete-wrapper">
-                    <input type="text" class="prod-name" placeholder="Search/Select..." autocomplete="off" style="padding: 10px;" oninput="filterDropdown(this)" onfocus="filterDropdown(this)" onblur="hideDropdown(this)">
-                    <ul class="autocomplete-list"></ul>
-                </div>
-                <input type="number" class="prod-qty" placeholder="Qty" value="1" style="width: 70px; padding: 10px; font-size: 14px; box-sizing:border-box;">
-                <input type="number" class="prod-amount" placeholder="₹ Amt" style="flex: 1; padding: 10px; font-size: 14px; width:100%; box-sizing:border-box;">
-                <button class="btn-action" style="padding: 0 12px; font-size: 16px; border-radius: 8px;" onclick="addProductRow(this)">➕</button>
-            </div>
-        `;
-        
-        if(currentUser === 'admin') {
-            alert(`✅ Logged ${validDataToPush.length} product(s) under salesman: ${entryUser.toUpperCase()}`);
-        } else {
-            alert("✅ Sale saved successfully!");
-        }
-    }
-
-    function populateAdminFilters() {
-        const select = document.getElementById('salesmanFilter');
-        if(select) {
-            const currentValue = select.value;
-            let html = `<option value="all">📊 All Team Data</option>`;
-            registeredSalesmen.forEach(s => html += `<option value="${s}">👤 ${s.toUpperCase()}</option>`);
-            select.innerHTML = html; select.value = currentValue || 'all';
-        }
-        
-        const entrySelect = document.getElementById('entrySalesman');
-        if(entrySelect) {
-            const currentEntry = entrySelect.value;
-            let entryHtml = `<option value="admin">Log as: Admin</option>`;
-            registeredSalesmen.forEach(s => entryHtml += `<option value="${s}">Log as: ${s.toUpperCase()}</option>`);
-            entrySelect.innerHTML = entryHtml; entrySelect.value = currentEntry || 'admin';
-        }
-
-        const prodSelect = document.getElementById('productReportSalesmanFilter');
-        if(prodSelect) {
-            const currentProd = prodSelect.value;
-            let prodHtml = `<option value="all">📊 All Team Breakdown</option>`;
-            registeredSalesmen.forEach(s => prodHtml += `<option value="${s}">👤 ${s.toUpperCase()}</option>`);
-            prodSelect.innerHTML = prodHtml; prodSelect.value = currentProd || 'all';
-        }
-    }
-
-    function renderSalesmenManagementList() {
-        const listContainer = document.getElementById('salesmenListContainer');
-        if(!listContainer) return;
-        listContainer.innerHTML = '';
-        registeredSalesmen.forEach(user => {
-            listContainer.innerHTML += `<div class="salesman-list-item"><span>👤 ${user}</span><button class="btn-danger" style="padding: 4px 8px;" onclick="deleteSalesman('${user}')">🗑️</button></div>`;
-        });
-    }
-
-    function updateMonthDropdown() {
-        const filter = document.getElementById('monthFilter');
-        const currentMonth = new Date().toISOString().slice(0, 7);
-        const monthsInDB = [...new Set(allSales.map(s => s.date.slice(0, 7)))];
-        if (!monthsInDB.includes(currentMonth)) monthsInDB.push(currentMonth);
-        monthsInDB.sort().reverse();
-        const savedValue = filter.value;
-        filter.innerHTML = monthsInDB.map(m => `<option value="${m}">${new Date(m + "-01").toLocaleString('default', { month: 'long', year: 'numeric' })}</option>`).join('');
-        filter.value = (savedValue && monthsInDB.includes(savedValue)) ? savedValue : currentMonth;
-    }
-
-    function formatINR(number) { return number.toLocaleString('en-IN', { maximumFractionDigits: 0 }); }
-
-    function renderProductTable() {
-        const selectedMonth = document.getElementById('monthFilter').value;
-        const pFilterSelect = document.getElementById('productReportSalesmanFilter');
-        const pItemSelect = document.getElementById('productReportItemFilter');
-        
-        if (!pFilterSelect) return;
-        
-        const pFilter = pFilterSelect.value; 
-        const pItemFilter = pItemSelect ? pItemSelect.value : 'all';
-        
-        const pBody = document.getElementById('productReportBody');
-        const pThSalesman = document.getElementById('thProdSalesman');
-        
-        if(!pBody) return;
-        pBody.innerHTML = '';
-        
-        const monthlyData = allSales.filter(item => item.date.startsWith(selectedMonth));
-        let salesmanProductStats = {};
-        
-        monthlyData.forEach(item => {
-            const status = item.status || 'Completed'; 
-            const sName = item.salesman || 'unknown';
-            const prod = item.product || 'N/A';
-
-            if (pItemFilter !== 'all' && prod !== pItemFilter) return;
-
-            if (pFilter === 'all' || pFilter === sName) {
-                if (!salesmanProductStats[sName]) salesmanProductStats[sName] = {};
-                if (!salesmanProductStats[sName][prod]) salesmanProductStats[sName][prod] = { completed: 0, returned: 0 };
-                
-                if (status === 'Completed') salesmanProductStats[sName][prod].completed += item.amount;
-                if (status === 'Returned') salesmanProductStats[sName][prod].returned += item.amount;
+        const rows = document.querySelectorAll('.product-entry-row');
+        rows.forEach((row, index) => {
+            if (index === 0) {
+                row.querySelector('.prod-name').value = '';
+                row.querySelector('.prod-qty').value = '1';
+                row.querySelector('.prod-amount').value = '';
+            } else {
+                row.remove();
             }
         });
-        
-        let totalCompleted = 0, totalReturned = 0, totalNet = 0;
+    }
 
-        if (pFilter === 'all') {
-            if(pThSalesman) pThSalesman.style.display = 'table-cell';
-            let allEntries = [];
-            
-            Object.keys(salesmanProductStats).forEach(s => {
-                Object.keys(salesmanProductStats[s]).forEach(p => {
-                    let st = salesmanProductStats[s][p];
-                    if(st.completed > 0 || st.returned > 0) {
-                        allEntries.push({ salesman: s, product: p, completed: st.completed, returned: st.returned, net: st.completed - st.returned });
-                    }
-                });
-            });
-            
-            allEntries.sort((a,b) => a.salesman.localeCompare(b.salesman) || b.net - a.net).forEach(row => {
-                totalCompleted += row.completed; totalReturned += row.returned; totalNet += row.net;
-                pBody.innerHTML += `<tr>
-                    <td style="text-transform:capitalize;">${row.salesman}</td>
-                    <td><strong>${escapeHTML(row.product)}</strong></td>
-                    <td style="color:var(--success);">₹${formatINR(row.completed)}</td>
-                    <td style="color:var(--danger);">₹${formatINR(row.returned)}</td>
-                    <td style="font-weight:bold;">₹${formatINR(row.net)}</td>
-                </tr>`;
-            });
-        } else {
-            if(pThSalesman) pThSalesman.style.display = 'none';
-            let prods = salesmanProductStats[pFilter] || {};
-            let myEntries = [];
-            
-            Object.keys(prods).forEach(p => {
-                let st = prods[p];
-                if(st.completed > 0 || st.returned > 0) {
-                    myEntries.push({ product: p, completed: st.completed, returned: st.returned, net: st.completed - st.returned });
-                }
-            });
-            
-            myEntries.sort((a,b) => b.net - a.net).forEach(row => {
-                totalCompleted += row.completed; totalReturned += row.returned; totalNet += row.net;
-                pBody.innerHTML += `<tr>
-                    <td><strong>${escapeHTML(row.product)}</strong></td>
-                    <td style="color:var(--success);">₹${formatINR(row.completed)}</td>
-                    <td style="color:var(--danger);">₹${formatINR(row.returned)}</td>
-                    <td style="font-weight:bold;">₹${formatINR(row.net)}</td>
-                </tr>`;
-            });
+    function updateBillStatus(billId, currentStatus) {
+        // Toggle between Completed and Cancelled
+        const nextStatus = currentStatus === 'completed' ? 'cancelled' : 'completed';
+        const bill = billsData.find(b => b.id === billId);
+        if (bill) {
+            bill.status = nextStatus;
+            // db.ref('bills/' + billId).update({ status: nextStatus });
+            runUpdateUI();
         }
+    }
 
-        const colSpan = (pFilter === 'all') ? 2 : 1;
-        pBody.innerHTML += `<tr style="background: rgba(241, 245, 249, 0.9); font-weight: bold; border-top: 2px solid #cbd5e1;">
-            <td colspan="${colSpan}">TOTAL</td>
-            <td style="color:var(--success);">₹${formatINR(totalCompleted)}</td>
-            <td style="color:var(--danger);">₹${formatINR(totalReturned)}</td>
-            <td style="font-weight:bold;">₹${formatINR(totalNet)}</td>
-        </tr>`;
+    function deleteBill(billId) {
+        if(confirm("Permanently delete this bill?")) {
+            billsData = billsData.filter(b => b.id !== billId);
+            // db.ref('bills/' + billId).remove();
+            updateMonthFilterOptions();
+            runUpdateUI();
+        }
+    }
+
+    // --- UI UPDATES & FILTERING ---
+    function updateMonthFilterOptions() {
+        const select = document.getElementById('monthFilter');
+        const currentVal = select.value;
+        select.innerHTML = '<option value="all">All Time</option>';
+        
+        const months = new Set();
+        billsData.forEach(b => {
+            const d = new Date(b.date);
+            if(!isNaN(d)) months.add(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2, '0')}`);
+        });
+
+        Array.from(months).sort().reverse().forEach(m => {
+            const opt = document.createElement('option');
+            opt.value = m;
+            // Format to "YYYY-MM" readable
+            const dateObj = new Date(m + "-01");
+            opt.innerText = dateObj.toLocaleString('default', { month: 'long', year: 'numeric' });
+            select.appendChild(opt);
+        });
+        if(Array.from(months).includes(currentVal)) select.value = currentVal;
     }
 
     function runUpdateUI() {
-        const selectedMonth = document.getElementById('monthFilter').value || new Date().toISOString().slice(0, 7);
-        const selectedUserFilter = document.getElementById('salesmanFilter') ? document.getElementById('salesmanFilter').value : 'all';
-        
-        const isAdmin = (currentUser === 'admin');
-        const isViewingAll = isAdmin && (selectedUserFilter === 'all');
-        const targetScopeUser = isAdmin ? selectedUserFilter : currentUser;
-        
-        const salesTeamCount = Math.max(registeredSalesmen.length, 1); 
-        const target = isViewingAll ? (INDIVIDUAL_TARGET * salesTeamCount) : INDIVIDUAL_TARGET;
-        document.getElementById('targetValText').innerText = `₹${(target/100000).toFixed(0)}L`;
-        
-        const tbody = document.getElementById('tableBody');
-        const leaderBody = document.getElementById('leaderboardBody');
-        const salesmanReportBody = document.getElementById('salesmanReportBody'); 
-        
-        if(tbody) tbody.innerHTML = ''; 
-        if(leaderBody) leaderBody.innerHTML = '';
-        if(salesmanReportBody) salesmanReportBody.innerHTML = '';
-        
-        let teamTotal = 0, pieData = {}, lineData = {}, productData = {};
-        let completedAmt = 0, returnedAmt = 0;
-        let completedCount = 0, returnedCount = 0, cancelledCount = 0;
+        const monthFilter = document.getElementById('monthFilter').value;
+        const salesmanFilter = isAdmin ? document.getElementById('salesmanFilter').value : currentUser;
 
-        let salesmanStats = {};
-        registeredSalesmen.forEach(name => {
-            pieData[name] = 0;
-            salesmanStats[name] = { completed: 0, returned: 0, cancelled: 0 };
+        // Apply Filters
+        let filteredBills = billsData.filter(b => {
+            let passMonth = true;
+            let passSalesman = true;
+
+            if (monthFilter !== 'all') {
+                const bMonth = b.date.substring(0, 7); // "YYYY-MM"
+                if (bMonth !== monthFilter) passMonth = false;
+            }
+            if (salesmanFilter !== 'all') {
+                if (b.salesman !== salesmanFilter) passSalesman = false;
+            }
+            return passMonth && passSalesman;
         });
 
-        const monthlyData = allSales.filter(item => item.date.startsWith(selectedMonth));
-
-        monthlyData.forEach(item => {
-            const status = item.status || 'Completed'; 
-            const sName = item.salesman || 'unknown';
-            const prod = item.product || 'N/A';
-
-            if(salesmanStats[sName]) {
-                if(status === 'Completed') salesmanStats[sName].completed += item.amount;
-                if(status === 'Returned') salesmanStats[sName].returned += item.amount;
-                if(status === 'Cancelled') salesmanStats[sName].cancelled++;
-            }
-
-            if(status === 'Completed') {
-                teamTotal += item.amount;
-                pieData[item.salesman] = (pieData[item.salesman] || 0) + item.amount;
-                if (isViewingAll || item.salesman === targetScopeUser) {
-                    productData[prod] = (productData[prod] || 0) + item.amount;
-                }
-            }
-
-            if(item.salesman === targetScopeUser) {
-                if(status === 'Completed') { completedAmt += item.amount; completedCount++; }
-                if(status === 'Returned') { returnedAmt += item.amount; returnedCount++; }
-                if(status === 'Cancelled') { cancelledCount++; }
-            }
+        // 1. Update Top Stats Grid (Only counting 'completed')
+        let totalRevenue = 0;
+        filteredBills.forEach(b => {
+            if(b.status === 'completed') totalRevenue += b.totalAmount;
         });
+        
+        // Calculate dynamic target based on user count if admin views "all"
+        let activeTarget = globalTarget;
+        if (isAdmin && salesmanFilter === 'all') {
+            const uniqueSalesmen = new Set(filteredBills.map(b => b.salesman)).size;
+            activeTarget = uniqueSalesmen > 0 ? (globalTarget * uniqueSalesmen) : globalTarget;
+        }
 
-        const displayTotal = isViewingAll ? teamTotal : completedAmt;
-        const progPerc = Math.min(100, (displayTotal / target) * 100).toFixed(1);
+        document.getElementById('targetValText').innerText = '₹' + activeTarget.toLocaleString('en-IN');
+        document.getElementById('totalVal').innerText = '₹' + totalRevenue.toLocaleString('en-IN');
         
-        document.getElementById('progressBar').style.width = progPerc + '%';
-        document.getElementById('progressPercent').innerText = progPerc + '%';
-        document.getElementById('statTitle').innerText = isViewingAll ? "Team Total" : "Completed";
-        
-        const monthSelect = document.getElementById('monthFilter');
-        const monthText = monthSelect.options[monthSelect.selectedIndex] ? monthSelect.options[monthSelect.selectedIndex].text : selectedMonth;
-        document.getElementById('printSubheader').innerText = `${monthText} | ${isViewingAll ? "All Team Overview" : `Salesman: ${targetScopeUser.toUpperCase()}`}`;
+        const gap = activeTarget - totalRevenue;
+        const gapEl = document.getElementById('gapVal');
+        if(gap <= 0) { gapEl.innerText = 'Goal Met! 🎉'; gapEl.style.color = 'var(--success)'; }
+        else { gapEl.innerText = '₹' + gap.toLocaleString('en-IN'); gapEl.style.color = 'var(--danger)'; }
 
-        const showAdminIndividualStats = isAdmin && !isViewingAll;
-        
+        let prog = Math.min((totalRevenue / activeTarget) * 100, 100) || 0;
+        document.getElementById('progressBar').style.width = prog + '%';
+        document.getElementById('progressPercent').innerText = prog.toFixed(1) + '%';
+
+        // 2. Render Tables
+        renderRecentBillsTable(filteredBills);
         if (isAdmin) {
-            document.getElementById('mainFilterSection').style.display = 'flex';
-            document.getElementById('performanceGrid').style.display = 'block';
-            document.getElementById('productReportSection').style.display = 'block';
-            
-            document.getElementById('individualChartGrid').style.display = showAdminIndividualStats ? 'grid' : 'none';
-            document.getElementById('annualChartBox').style.display = showAdminIndividualStats ? 'block' : 'none';
-            document.getElementById('performanceGrid').classList.toggle('split', showAdminIndividualStats);
+            renderAdminTables(billsData.filter(b => {
+                if (monthFilter !== 'all') return b.date.substring(0, 7) === monthFilter;
+                return true;
+            }));
+        }
 
-            if(showAdminIndividualStats) {
-                if(returnPieChart && billPieChart) {
-                    returnPieChart.data.datasets[0].data = [completedAmt, returnedAmt];
-                    returnPieChart.update();
-                    billPieChart.data.datasets[0].data = [completedCount, returnedCount, cancelledCount];
-                    billPieChart.update();
-                }
+        // 3. Render Charts
+        renderCharts(filteredBills);
+    }
 
-                const selectedYear = selectedMonth.slice(0, 4); 
-                let annualData = {};
-                for(let i = 1; i <= 12; i++) {
-                    let mm = i < 10 ? '0' + i : i;
-                    annualData[`${selectedYear}-${mm}`] = 0;
-                }
+    function renderRecentBillsTable(bills) {
+        const tbody = document.getElementById('recentBillsBody');
+        tbody.innerHTML = '';
+        const sorted = [...bills].sort((a,b) => new Date(b.date) - new Date(a.date));
+        
+        sorted.forEach(bill => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${bill.date}</td>
+                <td><strong>${bill.billNo}</strong></td>
+                <td>${bill.customer} <br><small style="color:#94a3b8">${isAdmin? 'by ' + bill.salesman : ''}</small></td>
+                <td style="text-align:center;"><strong>${bill.totalQty}</strong></td>
+                <td style="color: var(--success); font-weight: bold;">₹${bill.totalAmount.toLocaleString('en-IN')}</td>
+                <td><span class="badge badge-${bill.status}">${bill.status}</span></td>
+                <td class="no-print">
+                    <button onclick="updateBillStatus('${bill.id}', '${bill.status}')" class="btn-action" style="font-size: 11px;">Toggle Status</button>
+                    <button onclick="deleteBill('${bill.id}')" class="btn-danger" style="font-size: 11px;">🗑️</button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
 
-                allSales.filter(s => s.salesman === targetScopeUser && s.date.startsWith(selectedYear) && (s.status || 'Completed') === 'Completed')
-                        .forEach(s => {
-                            const m = s.date.slice(0, 7);
-                            if(annualData[m] !== undefined) annualData[m] += s.amount;
-                        });
-
-                if(annualChart) {
-                    annualChart.data.labels = Object.keys(annualData).map(m => new Date(m + "-01").toLocaleString('default', { month: 'short' }));
-                    annualChart.data.datasets[0].data = Object.values(annualData);
-                    annualChart.update();
-                    document.getElementById('annualChartTitle').innerText = `📅 ${selectedYear} Annual Performance (${targetScopeUser.toUpperCase()})`;
-                }
+    function renderAdminTables(dataForMonth) {
+        const summary = {};
+        dataForMonth.forEach(b => {
+            if (!summary[b.salesman]) summary[b.salesman] = { revenue: 0, qty: 0, bills: 0 };
+            summary[b.salesman].bills += 1;
+            if(b.status === 'completed') {
+                summary[b.salesman].revenue += b.totalAmount;
+                summary[b.salesman].qty += b.totalQty;
             }
+        });
 
-            if(pieChart) {
-                if(isViewingAll) {
-                    document.getElementById('pieBox').style.display = 'block';
-                    document.getElementById('detailedReportSection').style.display = 'block';
-                    
-                    Object.entries(pieData).sort((a,b) => b[1] - a[1]).forEach(([name, amt], i) => {
-                        if(leaderBody) leaderBody.innerHTML += `<tr><td>${i+1}</td><td style="text-transform:capitalize">${name}</td><td style="text-align:right">₹${formatINR(amt)}</td></tr>`;
-                    });
-                    
-                    if(salesmanReportBody) {
-                        Object.keys(salesmanStats).forEach(name => {
-                            let stats = salesmanStats[name];
-                            let targetPerc = Math.min(100, (stats.completed / INDIVIDUAL_TARGET) * 100).toFixed(1);
-                            salesmanReportBody.innerHTML += `<tr>
-                                <td style="text-transform:capitalize; font-weight:600;">${name}</td>
-                                <td style="color:var(--success); font-weight:bold;">₹${formatINR(stats.completed)}</td>
-                                <td style="color:var(--danger);">₹${formatINR(stats.returned)}</td>
-                                <td>${stats.cancelled}</td>
-                                <td><span class="badge ${targetPerc >= 100 ? 'badge-completed' : 'badge-bill'}">${targetPerc}%</span></td>
-                            </tr>`;
-                        });
-                    }
-                    
-                    const colorCount = Object.keys(pieData).length;
-                    const safeColors = Array.from({length: colorCount}, (_, i) => CHART_COLORS[i % CHART_COLORS.length]);
-                    
-                    pieChart.data.labels = Object.keys(pieData);
-                    pieChart.data.datasets[0].data = Object.values(pieData);
-                    pieChart.data.datasets[0].backgroundColor = safeColors;
-                    pieChart.update();
-                } else { 
-                    document.getElementById('pieBox').style.display = 'none'; 
-                    document.getElementById('detailedReportSection').style.display = 'block';
-                    if (leaderBody) leaderBody.innerHTML = `<tr><td colspan="3" style="text-align:center; color:#64748b;">Leaderboard hidden while filtering specific user.</td></tr>`;
-                    
-                    if (salesmanReportBody && salesmanStats[targetScopeUser]) {
-                        let stats = salesmanStats[targetScopeUser];
-                        let targetPerc = Math.min(100, (stats.completed / INDIVIDUAL_TARGET) * 100).toFixed(1);
-                        salesmanReportBody.innerHTML = `<tr>
-                            <td style="text-transform:capitalize; font-weight:600;">${targetScopeUser}</td>
-                            <td style="color:var(--success); font-weight:bold;">₹${formatINR(stats.completed)}</td>
-                            <td style="color:var(--danger);">₹${formatINR(stats.returned)}</td>
-                            <td>${stats.cancelled}</td>
-                            <td><span class="badge ${targetPerc >= 100 ? 'badge-completed' : 'badge-bill'}">${targetPerc}%</span></td>
-                        </tr>`;
-                    }
-                }
+        // Convert to array for sorting
+        const arr = Object.keys(summary).map(key => ({
+            name: key,
+            revenue: summary[key].revenue,
+            qty: summary[key].qty,
+            bills: summary[key].bills
+        })).sort((a,b) => b.revenue - a.revenue);
+
+        // Render Leaderboard
+        const lbBody = document.getElementById('leaderboardBody');
+        lbBody.innerHTML = '';
+        arr.forEach((item, index) => {
+            let medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : (index+1);
+            lbBody.innerHTML += `
+                <tr>
+                    <td><strong>${medal}</strong></td>
+                    <td style="text-transform: capitalize;">${item.name}</td>
+                    <td style="text-align:center;">${item.qty}</td>
+                    <td style="text-align:right; font-weight:bold; color:var(--success)">₹${item.revenue.toLocaleString('en-IN')}</td>
+                </tr>
+            `;
+        });
+
+        // Render Detailed
+        const detBody = document.getElementById('detailedReportBody');
+        detBody.innerHTML = '';
+        arr.forEach(item => {
+            detBody.innerHTML += `
+                <tr>
+                    <td style="text-transform: capitalize; font-weight:bold;">${item.name}</td>
+                    <td>${item.bills}</td>
+                    <td>${item.qty} Units</td>
+                    <td>₹${globalTarget.toLocaleString('en-IN')}</td>
+                    <td style="color:var(--success); font-weight:bold;">₹${item.revenue.toLocaleString('en-IN')}</td>
+                </tr>
+            `;
+        });
+    }
+
+    // --- CHARTS LOGIC ---
+    function renderCharts(bills) {
+        // Destroy existing charts to prevent canvas overlap errors
+        if(chartInstances.line) chartInstances.line.destroy();
+        if(chartInstances.pie) chartInstances.pie.destroy();
+        if(chartInstances.bar) chartInstances.bar.destroy();
+
+        // 1. Line Chart Data (Revenue by Date - Completed only)
+        const dateMap = {};
+        bills.forEach(b => {
+            if(b.status === 'completed') {
+                dateMap[b.date] = (dateMap[b.date] || 0) + b.totalAmount;
             }
+        });
+        const dates = Object.keys(dateMap).sort();
+        const amounts = dates.map(d => dateMap[d]);
 
-            if(productChart) {
-                const sortedProducts = Object.entries(productData).sort((a,b) => b[1] - a[1]).slice(0, 10);
-                productChart.data.labels = sortedProducts.map(p => p[0]);
-                productChart.data.datasets[0].data = sortedProducts.map(p => p[1]);
-                productChart.update();
-                document.getElementById('productChartTitle').innerText = `📦 Top Products (${isViewingAll ? 'Team' : targetScopeUser.toUpperCase()})`;
+        const ctxLine = document.getElementById('lineChart').getContext('2d');
+        chartInstances.line = new Chart(ctxLine, {
+            type: 'line',
+            data: {
+                labels: dates.length ? dates : ['No Data'],
+                datasets: [{
+                    label: 'Revenue (₹)',
+                    data: amounts.length ? amounts : [0],
+                    borderColor: '#3b82f6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                    fill: true,
+                    tension: 0.3
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+        });
+
+        // 2. Pie Chart (Status Ratio)
+        let comp = 0, canc = 0;
+        bills.forEach(b => {
+            if(b.status === 'completed') comp++;
+            if(b.status === 'cancelled') canc++;
+        });
+
+        const ctxPie = document.getElementById('billPieChart').getContext('2d');
+        chartInstances.pie = new Chart(ctxPie, {
+            type: 'doughnut',
+            data: {
+                labels: ['Completed', 'Cancelled'],
+                datasets: [{
+                    data: [comp, canc],
+                    backgroundColor: ['#10b981', '#f43f5e']
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false }
+        });
+
+        // 3. Bar Chart (Top Products by Qty)
+        const prodMap = {};
+        bills.forEach(b => {
+            if(b.status === 'completed') {
+                b.products.forEach(p => {
+                    prodMap[p.name] = (prodMap[p.name] || 0) + p.qty;
+                });
             }
-
-            renderProductTable();
-        } else {
-            document.getElementById('mainFilterSection').style.display = 'none';
-            document.getElementById('individualChartGrid').style.display = 'none';
-            document.getElementById('performanceGrid').style.display = 'none';
-            document.getElementById('productReportSection').style.display = 'none';
-        }
-
-        const filtered = isViewingAll ? monthlyData : monthlyData.filter(s => s.salesman === targetScopeUser);
-        
-        filtered.sort((a,b) => new Date(a.date) - new Date(b.date)).forEach(item => {
-            const st = item.status || 'Completed';
-            if(st === 'Completed') { lineData[item.date] = (lineData[item.date] || 0) + item.amount; }
         });
+        const sortedProds = Object.keys(prodMap).map(k => ({name: k, qty: prodMap[k]})).sort((a,b)=>b.qty - a.qty).slice(0,5);
 
-        if(tbody) {
-            [...filtered].reverse().forEach(item => {
-                const st = item.status || 'Completed';
-                const badgeClass = st === 'Completed' ? 'badge-completed' : (st === 'Returned' ? 'badge-returned' : 'badge-cancelled');
-                
-                const safeCustomer = escapeHTML(item.customer);
-                const safeBill = escapeHTML(item.billNo);
-                const safeProduct = escapeHTML(item.product || 'N/A');
-                const qtyDisplay = item.qty ? ` (Qty: ${item.qty})` : '';
-                
-                const canDelete = isAdmin || item.salesman === currentUser;
-                
-                tbody.innerHTML += `<tr>
-                    <td>${item.date}</td>
-                    <td><span class="badge badge-bill">${safeBill}</span></td>
-                    <td><strong>${safeProduct}</strong>${qtyDisplay}</td>
-                    <td><span class="badge ${badgeClass}">${st}</span></td>
-                    <td>${safeCustomer}</td>
-                    ${isAdmin ? `<td style="text-transform:capitalize">${item.salesman}</td>` : ''}
-                    <td style="${st !== 'Completed' ? 'text-decoration:line-through; color:#94a3b8;' : ''}">₹${formatINR(item.amount)}</td>
-                    <td class="delete-btn">${canDelete ? `<button onclick="deleteEntry('${item.fireId}')" style="border:none; background:none; cursor:pointer; font-size:16px;" title="Delete Record">🗑️</button>` : ''}</td>
-                </tr>`;
-            });
-        }
-
-        document.getElementById('totalVal').innerText = `₹${formatINR(displayTotal)}`;
-        document.getElementById('gapVal').innerText = `₹${formatINR(Math.max(0, target - displayTotal))}`;
-
-        if(lineChart) {
-            lineChart.data.labels = Object.keys(lineData); 
-            lineChart.data.datasets[0].data = Object.values(lineData); 
-            lineChart.update();
-        }
-    }
-
-    function triggerPrint() { setTimeout(() => { window.print(); }, 300); }
-
-    function addSalesman() {
-        const newUser = document.getElementById('newSalesmanUser').value.toLowerCase().trim();
-        const newPass = document.getElementById('newSalesmanPass').value.trim();
-        if(!newUser || !newPass) return alert("Fill in all salesman fields!");
-        if(newUser === 'admin') return alert("Cannot overwrite system administrator account.");
-        db.ref(`userConfigs/${newUser}`).set({ password: newPass }).then(() => {
-            alert(`User "${newUser}" registered!`);
-            document.getElementById('newSalesmanUser').value = ''; document.getElementById('newSalesmanPass').value = '';
-        });
-    }
-
-    function deleteSalesman(username) { 
-        if(confirm(`Completely delete salesman "${username}"?`)) {
-            db.ref(`userConfigs/${username}`).remove().catch(e => alert("Error: " + e.message)); 
-        }
-    }
-    
-    function toggleSettings() { const p = document.getElementById('settingsPanel'); p.style.display = p.style.display === 'block' ? 'none' : 'block'; }
-    function togglePassView() {
-        const inp = document.getElementById('newPass'); const eye = document.getElementById('eyeIcon');
-        inp.type = inp.type === 'password' ? 'text' : 'password'; eye.innerText = inp.type === 'password' ? '👁️' : '🔒';
-    }
-    
-    function updatePassword() {
-        const newP = document.getElementById('newPass').value;
-        if(newP.length < 4) return alert("Password too short!");
-        db.ref(`userConfigs/${currentUser}`).set({ password: newP }).then(() => {
-            alert("Password updated!"); toggleSettings(); document.getElementById('newPass').value = '';
-        });
-    }
-
-    function exportToCSV() {
-        const month = document.getElementById('monthFilter').value;
-        const selectedUserFilter = document.getElementById('salesmanFilter') ? document.getElementById('salesmanFilter').value : 'all';
-        const targetScopeUser = (currentUser === 'admin' && selectedUserFilter !== 'all') ? selectedUserFilter : null;
-        
-        let filtered = allSales.filter(s => s.date.startsWith(month));
-        if (targetScopeUser) filtered = filtered.filter(s => s.salesman === targetScopeUser);
-
-        let csv = "Date,Bill,Product,Qty,Status,Customer,Salesman,Amount\n";
-        filtered.forEach(s => {
-            const safeCustomer = (s.customer || '').replace(/"/g, '""');
-            const safeProduct = (s.product || 'N/A').replace(/"/g, '""');
-            const status = s.status || 'Completed';
-            const qty = s.qty || 1;
-            csv += `${s.date},${s.billNo},"${safeProduct}",${qty},${status},"${safeCustomer}",${s.salesman},${s.amount}\n`;
-        });
-        
-        const blob = new Blob([csv], {type: 'text/csv'});
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url; a.download = targetScopeUser ? `Sales_${targetScopeUser}_${month}.csv` : `Sales_Team_${month}.csv`; a.click();
-    }
-
-    function deleteEntry(id) { 
-        if(confirm("Delete this specific product record?")) {
-            db.ref('sales/'+id).remove().catch(e => alert("Error: " + e.message)); 
-        }
-    }
-    
-    async function clearAllData() { 
-        const enteredPass = prompt("WARNING: This will delete ALL sales.\nEnter Admin password:");
-        if(!enteredPass) return;
-        
-        const snapshot = await db.ref(`userConfigs/${currentUser}`).once('value');
-        const dbPassword = snapshot.val()?.password || snapshot.val();
-
-        if (dbPassword === enteredPass) {
-            if(confirm("FINAL CONFIRMATION: Are you absolutely sure?")) db.ref('sales').remove().then(() => alert("Database wiped clean."));
-        } else { alert("Incorrect Password."); }
-    }
-    
-    function updateGlobalTarget() {
-        const t = parseFloat(document.getElementById('newTargetInput').value);
-        if(isNaN(t) || t <= 0) return alert("Enter a valid target amount");
-        db.ref('settings/individualTarget').set(t).then(() => alert("Global Target Updated!"));
-    }
-
-    function addNewProduct() {
-        const pName = document.getElementById('newProductName').value.trim();
-        if(!pName) return;
-        
-        const isDuplicate = availableProducts.some(p => p.name.toLowerCase() === pName.toLowerCase());
-        if(isDuplicate) { alert("⚠️ This product already exists in the catalog!"); return; }
-
-        db.ref('products').push({ name: pName }).then(() => {
-            document.getElementById('newProductName').value = '';
-            alert("✅ Product Added!");
-        });
-    }
-
-    function deleteProduct(id, name) {
-        if(confirm(`Delete product "${name}" from the catalog?`)) {
-            db.ref(`products/${id}`).remove().catch(e => alert("Error: " + e.message));
-        }
-    }
-
-    function renderProductList() {
-        const list = document.getElementById('productListContainer');
-        if(!list) return;
-        list.innerHTML = availableProducts.length ? '' : '<span style="color:#475569; font-size:12px;">No products added yet.</span>';
-        availableProducts.forEach(p => {
-            list.innerHTML += `<div class="salesman-list-item"><span>📦 ${escapeHTML(p.name)}</span><button class="btn-danger" style="padding: 4px 8px;" onclick="deleteProduct('${p.id}', '${escapeHTML(p.name)}')">🗑️</button></div>`;
-        });
-    }
-
-    function populateProductDropdowns() {
-        const reportSelect = document.getElementById('productReportItemFilter');
-        if(reportSelect) {
-            const currentReportVal = reportSelect.value;
-            let reportHtml = `<option value="all">📦 All Products</option>`;
-            availableProducts.forEach(p => reportHtml += `<option value="${escapeHTML(p.name)}">${escapeHTML(p.name)}</option>`);
-            reportSelect.innerHTML = reportHtml;
-            if(currentReportVal && (currentReportVal === 'all' || availableProducts.find(p => p.name === currentReportVal))) {
-                reportSelect.value = currentReportVal;
+        const ctxBar = document.getElementById('productChart').getContext('2d');
+        chartInstances.bar = new Chart(ctxBar, {
+            type: 'bar',
+            data: {
+                labels: sortedProds.length ? sortedProds.map(p=>p.name) : ['No Data'],
+                datasets: [{
+                    label: 'Qty Sold',
+                    data: sortedProds.length ? sortedProds.map(p=>p.qty) : [0],
+                    backgroundColor: '#8b5cf6',
+                    borderRadius: 4
+                }]
+            },
+            options: { 
+                responsive: true, 
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } }
             }
-        }
-    }
-
-    function initCharts() {
-        if(lineChart) lineChart.destroy();
-        lineChart = new Chart(document.getElementById('lineChart'), {
-            type: 'line', data: { labels: [], datasets: [{ label: 'Sales (Completed)', data: [], borderColor: '#3b82f6', tension: 0.3, fill: true, backgroundColor: 'rgba(59, 130, 246, 0.1)' }] },
-            options: { maintainAspectRatio: false, plugins: { legend: { display: false } } }
         });
-        
-        if(currentUser === 'admin' && !pieChart) {
-            pieChart = new Chart(document.getElementById('pieChart'), { type: 'pie', data: { labels: [], datasets: [{ data: [], backgroundColor: [] }] }, options: { maintainAspectRatio: false } });
-        }
-
-        if(!returnPieChart) {
-            returnPieChart = new Chart(document.getElementById('returnPieChart'), {
-                type: 'doughnut', data: { labels: ['Completed ₹', 'Returned ₹'], datasets: [{ data: [0,0], backgroundColor: ['#10b981', '#ef4444'] }] },
-                options: { maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 12 } } } }
-            });
-        }
-        if(!billPieChart) {
-            billPieChart = new Chart(document.getElementById('billPieChart'), {
-                type: 'doughnut', data: { labels: ['Completed', 'Returned', 'Cancelled'], datasets: [{ data: [0,0,0], backgroundColor: STATUS_COLORS }] },
-                options: { maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 12 } } } }
-            });
-        }
-        
-        if(!annualChart) {
-            annualChart = new Chart(document.getElementById('annualChart'), {
-                type: 'bar', 
-                data: { labels: [], datasets: [{ label: 'Completed Revenue (₹)', data: [], backgroundColor: '#8b5cf6', borderRadius: 4 }] },
-                options: { maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
-            });
-        }
-
-        if(!productChart) {
-            productChart = new Chart(document.getElementById('productChart'), {
-                type: 'bar',
-                data: { labels: [], datasets: [{ label: 'Revenue (₹)', data: [], backgroundColor: '#0ea5e9', borderRadius: 4 }] },
-                options: { maintainAspectRatio: false, indexAxis: 'y', plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true } } }
-            });
-        }
     }
 
-    function handleLogout() { localStorage.removeItem('activeUser'); location.reload(); }
+    // --- MOCK INITIALIZER ---
+    function loadMockData() {
+        // Preload some dummy data to show how it works immediately
+        if(billsData.length === 0) {
+            billsData = [
+                { id: '1', date: '2026-07-20', billNo: 'B-101', customer: 'Acme Corp', salesman: 'user1', totalQty: 5, totalAmount: 50000, status: 'completed', products: [{name: 'Widget A', qty: 5, amount: 50000}] },
+                { id: '2', date: '2026-07-21', billNo: 'B-102', customer: 'Stark Ind', salesman: 'user2', totalQty: 10, totalAmount: 120000, status: 'completed', products: [{name: 'Widget B', qty: 10, amount: 120000}] },
+                { id: '3', date: '2026-07-22', billNo: 'B-103', customer: 'Wayne Ent', salesman: 'user1', totalQty: 2, totalAmount: 15000, status: 'cancelled', products: [{name: 'Widget C', qty: 2, amount: 15000}] }
+            ];
+        }
+        updateMonthFilterOptions();
+        runUpdateUI();
+    }
+
 </script>
 </body>
 </html>
