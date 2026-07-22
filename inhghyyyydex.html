@@ -68,41 +68,6 @@
             border: 1px solid rgba(255, 255, 255, 0.15);
             color: white; padding: 20px; border-radius: 15px; margin-bottom: 20px; 
             box-shadow: 0 10px 30px rgba(0,0,0,0.15);
-        }
-        
-        .form-panel label { font-size: 11px; font-weight: bold; margin-bottom: 5px; display: block; color: #cbd5e1; }
-        .form-grid { display: flex; flex-direction: column; gap: 15px; margin-bottom: 15px; }
-        .form-grid-row { display: flex; gap: 15px; flex-wrap: wrap; }
-        .form-grid-row > div { flex: 1; min-width: 140px; }
-        
-        .form-panel input, .form-panel select {
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            color: white; font-size: 15px;
-            width: 100%; box-sizing: border-box;
-        }
-        .form-panel input::placeholder { color: #cbd5e1; font-weight: normal; }
-        .form-panel select option { color: #0f172a; }
-
-        /* PRODUCT ROW FLEX FIXES */
-        .product-entry-row { display: flex; gap: 8px; margin-bottom: 10px; align-items: center; flex-wrap: wrap; }
-        .product-entry-row > .autocomplete-wrapper { flex: 2; min-width: 120px; }
-        .product-entry-row > input.prod-qty { flex: 0.8; min-width: 60px; }
-        .product-entry-row > input.prod-amount { flex: 1.2; min-width: 90px; }
-        .product-entry-row > button { flex: 0.5; min-width: 40px; height: 42px; }
-
-        .autocomplete-wrapper { position: relative; }
-        .autocomplete-list {
-            position: absolute; top: 100%; left: 0; right: 0;
-            background: #1e293b; border: 1px solid rgba(255,255,255,0.2);
-            border-radius: 8px; max-height: 180px; overflow-y: auto;
-            z-index: 1000; display: none; padding: 0; margin: 4px 0 0 0;
-            list-style: none; box-shadow: 0 8px 16px rgba(0,0,0,0.5);
-        }
-        .autocomplete-list li {
-            padding: 12px 15px; color: white; border-bottom: 1px solid rgba(255,255,255,0.1);
-            cursor: pointer; font-size: 14px; transition: background 0.1s;
-        }
         .autocomplete-list li:hover { background: var(--accent); }
         
         .btn-add { background: var(--success); color: white; border: none; padding: 16px; border-radius: 12px; font-weight: bold; cursor: pointer; width: 100%; font-size: 16px; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3); transition: transform 0.1s; }
