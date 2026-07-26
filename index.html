@@ -58,7 +58,7 @@
         .progress-bar-bg { width: 100%; background: rgba(226, 232, 240, 0.5); height: 12px; border-radius: 10px; overflow: hidden; margin-top: 15px; }
         #progressBar { width: 0%; height: 100%; background: linear-gradient(90deg, var(--accent), var(--success)); transition: width 0.6s ease; }
         
-        .speedometer-container { padding: 15px; text-align: center; display: flex; flex-direction: column; justify-content: center; align-items: center;}
+        .speedometer-container { padding: 15px; display: flex; flex-direction: column; justify-content: center; align-items: center;}
         
         .chart-grid { display: grid; grid-template-columns: 1fr; gap: 15px; margin-bottom: 15px; }
         @media (min-width: 768px) { 
@@ -67,6 +67,10 @@
         }
         .chart-box { padding: 15px; min-height: 260px; height: auto; }
         
+        /* Grid for team target visuals (3x3 layout) */
+        .team-grid { display: grid; grid-template-columns: 1fr; gap: 15px; margin-top: 15px; }
+        @media (min-width: 768px) { .team-grid { grid-template-columns: repeat(3, 1fr); } }
+
         .form-panel { 
             background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
             border: 1px solid rgba(255, 255, 255, 0.15); color: white; padding: 20px; border-radius: 15px; margin-bottom: 20px; 
@@ -117,9 +121,11 @@
         .print-header { display: none; }
 
         @media print {
-            @page { size: A4 portrait; margin: 15mm; }
+            /* Forced A4 Landscape for perfect presentation */
+            @page { size: A4 landscape; margin: 10mm; }
             * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
             body { background: white !important; margin: 0; padding: 0; }
+            
             .glass-panel, .admin-accordion { background: white !important; backdrop-filter: none !important; border: 1px solid #e2e8f0 !important; box-shadow: none !important; border-radius: 0 !important; }
             header button, #settingsPanel, .filter-section, .form-panel, .btn-action, .btn-danger, #loginOverlay, .delete-btn, .no-print { display: none !important; }
             .container, #mainApp, .table-wrap, .admin-accordion > div, #adminTeamTargetSection { display: block !important; width: 100% !important; margin: 0 !important; }
@@ -135,6 +141,17 @@
                 border-bottom: 2px solid #e2e8f0; 
                 padding-bottom: 10px; 
             }
+            
+            /* Print Alignment Overrides */
+            .stats-grid { display: grid !important; grid-template-columns: repeat(3, 1fr) !important; gap: 10px !important; }
+            .progress-layout { display: grid !important; grid-template-columns: 2fr 1fr !important; gap: 10px !important; }
+            .chart-grid.split-3 { display: grid !important; grid-template-columns: 1fr 1fr 1fr !important; gap: 10px !important; }
+            .team-grid { display: grid !important; grid-template-columns: repeat(3, 1fr) !important; gap: 10px !important; }
+            
+            .chart-box { height: auto !important; min-height: 200px !important; padding: 10px !important; page-break-inside: avoid; }
+            .chart-box div { height: 160px !important; }
+            
+            details.admin-accordion { break-inside: avoid; margin-bottom: 15px !important; }
         }
     </style>
 </head>
@@ -227,10 +244,13 @@
         </div>
 
         <div class="speedometer-container glass-panel">
-            <div style="font-size:12px; font-weight:bold; color:#475569; margin-bottom: 5px;">Velocity</div>
+            <!-- Text beside label -->
+            <div style="width: 100%; display:flex; justify-content:space-between; align-items:center; margin-bottom: 5px;">
+                <span style="font-size:14px; font-weight:bold; color:#475569;">Velocity</span>
+                <span id="speedoText" style="font-size: 18px; font-weight: 900; color: var(--primary);">0%</span>
+            </div>
             <div style="position: relative; height: 110px; width: 100%; display: flex; justify-content: center;">
                 <canvas id="speedometerChart"></canvas>
-                <div id="speedoText" style="position: absolute; bottom: 5px; font-size: 22px; font-weight: 900; color: var(--primary);">0%</div>
             </div>
         </div>
     </div>
@@ -271,12 +291,12 @@
         </div>
     </div>
 
-    <!-- NEW ADMIN ONLY: TEAM TARGET SECTION (Moved above Tx History) -->
+    <!-- ADMIN ONLY: TEAM TARGET SECTION (3x3 grid layout) -->
     <div id="adminTeamTargetSection" style="display:none;">
         <details class="admin-accordion" open>
             <summary>🎯 Team Target Achievement (Visual)</summary>
-            <div id="teamTargetVisuals" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-top: 15px;">
-                <!-- JS will inject cards with canvas and progress bars here -->
+            <div id="teamTargetVisuals" class="team-grid">
+                <!-- JS will inject cards with canvas and progress bars here in a 3-column layout -->
             </div>
         </details>
     </div>
@@ -425,7 +445,7 @@
         <button class="btn-add" onclick="addBillEntries()">Submit Full Bill</button>
     </div>
 
-    <div class="version-tag">Version 4.7 | URBAN CASA | MD Edition</div>
+    <div class="version-tag">Version 4.8 | URBAN CASA | MD Edition</div>
 </div>
 
 <script>
@@ -503,7 +523,7 @@
     let allSales = [];
     let registeredSalesmen = []; 
     let lineChart, pieChart, annualChart, productChart, productQtyChart, speedoChart;
-    window.teamGaugeCharts = {}; // Stores individual team speedometers
+    window.teamGaugeCharts = {}; 
 
     function escapeHTML(str) {
         if (!str) return '';
@@ -985,10 +1005,9 @@
         }
 
         if(isAdmin) {
-            // --- Salesmen Individual Speedometers & Bars ---
+            // --- Salesmen Individual Speedometers (3x3 Grid Setup) ---
             const visualContainer = document.getElementById('teamTargetVisuals');
             if (visualContainer) {
-                // Destroy old team gauge charts to cleanly rebuild and avoid overlapping lines
                 if(window.teamGaugeCharts) {
                     Object.values(window.teamGaugeCharts).forEach(c => c.destroy());
                 }
@@ -997,7 +1016,7 @@
                 
                 const sortedSalesmen = Object.keys(salesmanStats).sort((a,b) => salesmanStats[b].revenue - salesmanStats[a].revenue);
                 
-                // First: Build the HTML structures
+                // Construct Grid items
                 sortedSalesmen.forEach(name => {
                     let stats = salesmanStats[name];
                     let rev = stats.revenue;
@@ -1006,11 +1025,14 @@
                     
                     visualContainer.innerHTML += `
                         <div style="background: rgba(255,255,255,0.7); padding: 15px; border-radius: 12px; border: 1px solid rgba(255,255,255,1); box-shadow: 0 4px 15px rgba(0,0,0,0.05); text-align:center; page-break-inside: avoid;">
-                            <div style="font-weight: 800; font-size: 14px; text-transform: uppercase; color: var(--primary); margin-bottom: 5px;">👤 ${name}</div>
                             
-                            <div style="position: relative; height: 110px; width: 100%; display: flex; justify-content: center; margin-bottom: 5px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 5px;">
+                                <div style="font-weight: 800; font-size: 14px; text-transform: uppercase; color: var(--primary);">👤 ${name}</div>
+                                <div style="font-size: 18px; font-weight: 900; color: ${barColor};">${targetPerc}%</div>
+                            </div>
+                            
+                            <div style="position: relative; height: 100px; width: 100%; display: flex; justify-content: center; margin-bottom: 5px;">
                                 <canvas id="gauge_canvas_${name}"></canvas>
-                                <div style="position: absolute; bottom: 0px; font-size: 18px; font-weight: 900; color: ${barColor};">${targetPerc}%</div>
                             </div>
                             
                             <div style="display:flex; justify-content:space-between; font-size: 11px; font-weight: bold; margin-bottom: 5px; color:#64748b;">
@@ -1025,7 +1047,7 @@
                     `;
                 });
 
-                // Second: Initialize the Chart.js instances inside the newly created canvases
+                // Initialize Individual Charts
                 sortedSalesmen.forEach(name => {
                     let stats = salesmanStats[name];
                     let targetPerc = Math.min(100, (stats.revenue / INDIVIDUAL_TARGET) * 100).toFixed(1);
@@ -1092,10 +1114,6 @@
             // Sliced to strictly Top 5
             const sortedRevProducts = Object.entries(productData).sort((a,b) => b[1] - a[1]).slice(0, 5);
             const sortedQtyProducts = Object.entries(productQtyData).sort((a,b) => b[1] - a[1]).slice(0, 5);
-
-            // Set fixed height to prevent stretching
-            document.getElementById('productChartBox').querySelector('div').style.height = '220px';
-            document.getElementById('productQtyChartBox').querySelector('div').style.height = '220px';
 
             productChart.data.labels = sortedRevProducts.map(p => p[0]);
             productChart.data.datasets[0].data = sortedRevProducts.map(p => p[1]);
