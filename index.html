@@ -258,11 +258,11 @@
     <!-- ADMIN ONLY: PERFORMANCE CHARTS -->
     <div class="chart-grid split-3" id="performanceGrid" style="display:none; margin-bottom: 15px;">
         <div class="chart-box glass-panel" id="productChartBox">
-            <h4 id="productChartTitle" style="margin:0 0 15px 0; font-size:12px; text-align:center; color:#64748b;">📦 Top Products (Rev)</h4>
+            <h4 id="productChartTitle" style="margin:0 0 15px 0; font-size:12px; text-align:center; color:#64748b;">📦 Top 5 Products (Rev)</h4>
             <div style="height: 220px; position: relative;"><canvas id="productChart"></canvas></div>
         </div>
         <div class="chart-box glass-panel" id="productQtyChartBox">
-            <h4 id="productQtyChartTitle" style="margin:0 0 15px 0; font-size:12px; text-align:center; color:#64748b;">📊 Top Products (Qty)</h4>
+            <h4 id="productQtyChartTitle" style="margin:0 0 15px 0; font-size:12px; text-align:center; color:#64748b;">📊 Top 5 Products (Qty)</h4>
             <div style="height: 220px; position: relative;"><canvas id="productQtyChart"></canvas></div>
         </div>
         <div class="chart-box glass-panel" id="annualChartBox">
@@ -299,8 +299,6 @@
 
         <div style="display:flex; justify-content:flex-end; gap:5px; margin-bottom: 15px;" class="no-print">
             <button onclick="triggerPrint()" class="btn-action" style="background:#475569; padding: 8px 15px; border-radius:6px;">📄 Print MD Report</button>
-            <button onclick="exportToCSV()" class="btn-action" style="padding: 8px 15px; border-radius:6px;">📥 Export CSV</button>
-            <button class="btn-danger" onclick="clearAllData()" style="padding: 8px 15px; border-radius:6px;">🗑️ Reset Data</button>
         </div>
 
         <details class="admin-accordion" open>
@@ -424,7 +422,7 @@
         <button class="btn-add" onclick="addBillEntries()">Submit Full Bill</button>
     </div>
 
-    <div class="version-tag">Version 4.5 | URBAN CASA | MD Edition</div>
+    <div class="version-tag">Version 4.6 | URBAN CASA | MD Edition</div>
 </div>
 
 <script>
@@ -467,7 +465,6 @@
     };
 
     document.addEventListener("visibilitychange", () => {
-        // Exclude 'admin' from auto-logout
         if (document.visibilityState === 'hidden' && currentUser && currentUser !== 'admin') handleLogout();
     });
 
@@ -991,26 +988,23 @@
         }
 
         if(isAdmin && productChart && productQtyChart) {
-            // Un-sliced lists
-            const sortedRevProducts = Object.entries(productData).sort((a,b) => b[1] - a[1]);
-            const sortedQtyProducts = Object.entries(productQtyData).sort((a,b) => b[1] - a[1]);
+            // Sliced to strictly Top 5
+            const sortedRevProducts = Object.entries(productData).sort((a,b) => b[1] - a[1]).slice(0, 5);
+            const sortedQtyProducts = Object.entries(productQtyData).sort((a,b) => b[1] - a[1]).slice(0, 5);
 
-            // Dynamic Heights to fit all bars perfectly
-            const revHeight = Math.max(220, sortedRevProducts.length * 30);
-            document.getElementById('productChartBox').querySelector('div').style.height = revHeight + 'px';
-            
-            const qtyHeight = Math.max(220, sortedQtyProducts.length * 30);
-            document.getElementById('productQtyChartBox').querySelector('div').style.height = qtyHeight + 'px';
+            // Set fixed height to prevent stretching
+            document.getElementById('productChartBox').querySelector('div').style.height = '220px';
+            document.getElementById('productQtyChartBox').querySelector('div').style.height = '220px';
 
             productChart.data.labels = sortedRevProducts.map(p => p[0]);
             productChart.data.datasets[0].data = sortedRevProducts.map(p => p[1]);
             productChart.update();
-            document.getElementById('productChartTitle').innerText = `📦 Top Products Rev (${isViewingAll ? 'Team' : targetScopeUser.toUpperCase()})`;
+            document.getElementById('productChartTitle').innerText = `📦 Top 5 Products Rev (${isViewingAll ? 'Team' : targetScopeUser.toUpperCase()})`;
 
             productQtyChart.data.labels = sortedQtyProducts.map(p => p[0]);
             productQtyChart.data.datasets[0].data = sortedQtyProducts.map(p => p[1]);
             productQtyChart.update();
-            document.getElementById('productQtyChartTitle').innerText = `📊 Top Products Qty (${isViewingAll ? 'Team' : targetScopeUser.toUpperCase()})`;
+            document.getElementById('productQtyChartTitle').innerText = `📊 Top 5 Products Qty (${isViewingAll ? 'Team' : targetScopeUser.toUpperCase()})`;
         }
 
         renderProductTable();
@@ -1221,40 +1215,6 @@
         db.ref(`userConfigs/${currentUser}`).set({ password: newP }).then(() => {
             alert("Password updated!"); toggleSettings(); document.getElementById('newPass').value = '';
         });
-    }
-
-    function exportToCSV() {
-        const month = document.getElementById('monthFilter').value;
-        const selectedUserFilter = document.getElementById('salesmanFilter') ? document.getElementById('salesmanFilter').value : 'all';
-        const targetScopeUser = (currentUser === 'admin' && selectedUserFilter !== 'all') ? selectedUserFilter : null;
-        
-        let filtered = allSales.filter(s => s.date.startsWith(month));
-        if (targetScopeUser) filtered = filtered.filter(s => s.salesman === targetScopeUser);
-
-        let csv = "Date,Bill,Product,Qty,Customer,Salesman,Amount\n";
-        filtered.forEach(s => {
-            const safeCustomer = (s.customer || '').replace(/"/g, '""');
-            const safeProduct = (s.product || 'N/A').replace(/"/g, '""');
-            const qty = s.qty || 1;
-            csv += `${s.date},${s.billNo},"${safeProduct}",${qty},"${safeCustomer}",${s.salesman},${s.amount}\n`;
-        });
-        
-        const blob = new Blob([csv], {type: 'text/csv'});
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url; a.download = targetScopeUser ? `Sales_${targetScopeUser}_${month}.csv` : `Sales_Team_${month}.csv`; a.click();
-    }
-    
-    async function clearAllData() { 
-        const enteredPass = prompt("WARNING: This will delete ALL sales.\nEnter Admin password:");
-        if(!enteredPass) return;
-        
-        const snapshot = await db.ref(`userConfigs/${currentUser}`).once('value');
-        const dbPassword = snapshot.val()?.password || snapshot.val();
-
-        if (dbPassword === enteredPass) {
-            if(confirm("FINAL CONFIRMATION: Are you absolutely sure?")) db.ref('sales').remove().then(() => alert("Database wiped clean."));
-        } else { alert("Incorrect Password."); }
     }
     
     function updateGlobalTarget() {
