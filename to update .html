@@ -658,7 +658,7 @@
         <button onclick="triggerPrint()" class="btn-action" style="background:#475569; padding: 12px 25px; border-radius:8px; font-size: 16px; font-weight: bold; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">📄 Print MD Report</button>
     </div>
 
-    <div class="version-tag fade-in delay-4">Version 9.10 | URBAN CASA | MD Edition</div>
+    <div class="version-tag fade-in delay-4">Version 9.11 | URBAN CASA | MD Edition</div>
 </div>
 
 <script>
@@ -744,7 +744,7 @@
 
     function escapeHTML(str) {
         if (!str) return '';
-        return str.replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag));
+        return String(str).replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag));
     }
 
     function toggleDropdown(id) {
@@ -863,14 +863,15 @@
             if (!data) {
                 db.ref('userConfigs').set(USERS_DEFAULT);
             } else {
-                let updatedUsers = { ...USERS_DEFAULT, ...data };
-                db.ref('userConfigs').set(updatedUsers);
+                ['admin', 'lucky'].forEach(a => { if (!data[a]) db.ref('userConfigs/' + a).set(USERS_DEFAULT[a]); });
+                /* removed: re-seeding every default user brought deleted salesmen back */
             }
         });
 
         db.ref('userConfigs').on('value', (snapshot) => {
             const data = snapshot.val() || USERS_DEFAULT;
             userProfiles = data;
+            if (currentUser && !data[currentUser]) { handleLogout(); return; }
             registeredSalesmen = Object.keys(data).filter(user => !isAdminUser(user));
             
             if(currentUser) {
@@ -914,6 +915,7 @@
     async function handleLogin() {
         const u = document.getElementById('loginUser').value.toLowerCase().trim();
         const p = document.getElementById('loginPass').value;
+        if (!u || /[.#$\[\]\/]/.test(u)) return alert("Invalid username.");
         const snapshot = await db.ref(`userConfigs/${u}`).once('value');
         const userData = snapshot.val();
         
@@ -970,6 +972,7 @@
             document.getElementById('printBtnContainer').style.display = 'none';
         }
         
+        ['monthProductPerformanceSection', 'productHistoryDeepDiveSection'].forEach(id => { const el = document.getElementById(id); if (el) el.style.display = isAdminUser(currentUser) ? '' : 'none'; });
         initCharts();
         updateMonthDropdown(); 
         populateHistoryDropdowns();
@@ -1123,6 +1126,8 @@
         const dropdown = document.getElementById('salesmanFilterDropdown');
         if(dropdown) {
             let currentSelected = getSelectedCheckboxes('salesman-chk');
+            const prevKnownSalesmen = window._knownSalesmen || [];
+            window._knownSalesmen = [...registeredSalesmen];
             let html = `
                 <div style="padding: 8px 12px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; font-size: 11px; font-weight: bold; color: var(--accent);" onclick="event.stopPropagation()">
                     <span style="cursor: pointer;" onclick="selectAllSalesmen(true)">✓ Select All</span>
@@ -1130,7 +1135,7 @@
                 </div>
             `;
             registeredSalesmen.forEach(s => {
-                let isChecked = currentSelected.length === 0 || currentSelected.includes(s) ? 'checked' : '';
+                let isChecked = (currentSelected.length === 0 || currentSelected.includes(s) || !prevKnownSalesmen.includes(s)) ? 'checked' : '';
                 html += `
                     <label class="multiselect-item" onclick="event.stopPropagation()">
                         <input type="checkbox" class="salesman-chk" value="${s}" ${isChecked} onchange="runUpdateUI()">
@@ -1188,7 +1193,7 @@
         
         const currentSelected = getSelectedCheckboxes('month-chk');
         const currentMonth = new Date().toISOString().slice(0, 7);
-        const monthsInDB = [...new Set(allSales.map(s => s.date ? s.date.slice(0, 7) : ''))].filter(Boolean);
+        const monthsInDB = [...new Set(allSales.filter(s => isAdminUser(currentUser) || s.salesman === currentUser).map(s => s.date ? s.date.slice(0, 7) : ''))].filter(Boolean);
         if (!monthsInDB.includes(currentMonth)) monthsInDB.push(currentMonth);
         monthsInDB.sort().reverse();
         
@@ -1686,7 +1691,7 @@
         let selectedProds = getSelectedCheckboxes('prod-chk');
         updateDropdownLabel('prodSelectLabel', selectedProds, "📦 Select Products");
 
-        let selectedSalesmen = getSelectedCheckboxes('salesman-chk');
+        let selectedSalesmen = isAdminUser(currentUser) ? getSelectedCheckboxes('salesman-chk') : [currentUser];
         if(selectedSalesmen.length === 0) selectedSalesmen = registeredSalesmen;
         updateDropdownLabel('salesmanSelectLabel', selectedSalesmen.map(s => s.toUpperCase()), "All Team Data");
 
@@ -1754,7 +1759,7 @@
             teamTotal += itemAmt;
             pieData[item.salesman] = (pieData[item.salesman] || 0) + itemAmt;
             
-            if (selectedSalesmen.includes(sName)) {
+            if (isViewingAll || selectedSalesmen.includes(sName)) {
                 productData[prod] = (productData[prod] || 0) + itemAmt;
                 productQtyData[prod] = (productQtyData[prod] || 0) + itemQty;
                 uniqueBills.add(item.billNo + "_" + item.date + "_" + item.salesman);
@@ -1790,7 +1795,7 @@
             if(prevSalesmanStats[item.salesman] !== undefined) {
                 prevSalesmanStats[item.salesman] += amt;
             }
-            if (selectedSalesmen.includes(item.salesman)) {
+            if (isViewingAll || selectedSalesmen.includes(item.salesman)) {
                 prevMonthTotal += amt;
             }
         });
@@ -1863,7 +1868,7 @@
                 
                 if (currentCanvasCount !== sortedSalesmen.length) {
                     if(window.teamGaugeCharts) {
-                        Object.values(window.teamGaugeCharts).forEach(c => c.destroy());
+                        Object.values(window.teamGaugeCharts).forEach(c => { if (c.animationFrame) cancelAnimationFrame(c.animationFrame); c.destroy(); });
                     }
                     window.teamGaugeCharts = {};
                     visualContainer.innerHTML = '';
@@ -2005,7 +2010,7 @@
                 annualData[`${selectedYear}-${mm}`] = 0;
             }
 
-            allSales.filter(s => (selectedSalesmen.includes(s.salesman)) && s.date && s.date.startsWith(selectedYear))
+            allSales.filter(s => (isViewingAll || selectedSalesmen.includes(s.salesman)) && s.date && s.date.startsWith(selectedYear))
                     .forEach(s => {
                         const m = s.date.slice(0, 7);
                         const multiplier = (s.type === 'credit_note') ? -1 : 1;
@@ -2018,7 +2023,7 @@
             document.getElementById('annualChartTitle').innerText = `📅 ${selectedYear} Annual Performance (${isViewingAll ? 'Team' : selectedSalesmen.join(', ')})`;
         }
 
-        const filtered = activePeriodData.filter(s => selectedSalesmen.includes(s.salesman));
+        const filtered = activePeriodData.filter(s => isViewingAll || selectedSalesmen.includes(s.salesman));
         filtered.sort((a,b) => new Date(a.date) - new Date(b.date)).forEach(item => {
             const multiplier = (item.type === 'credit_note') ? -1 : 1;
             lineData[item.date] = (lineData[item.date] || 0) + (item.amount * multiplier);
@@ -2062,13 +2067,13 @@
                     <td><span class="badge badge-bill">${safeBill}</span></td>
                     <td><strong>${safeProduct}</strong></td>
                     <td>${safeCustomer}</td>
-                    ${isAdmin ? `<td style="text-transform:capitalize">\${group.salesman}</td>` : ''}
+                    ${isAdmin ? `<td style="text-transform:capitalize">${group.salesman}</td>` : ''}
                     <td style="text-align: center;"><strong>${group.totalQty}</strong></td>
                     <td style="color:${group.amount < 0 ? 'var(--danger)' : 'var(--primary)'};">₹${formatINR(group.amount)}</td>
                     <td class="delete-btn">
                         ${isAdmin ? `
                         <button onclick="editBillGroup('${fireIdsEncoded}', '${group.date}', '${billEncoded}', '${customerEncoded}', '${group.salesman}', '${group.type}')" style="border:none; background:none; cursor:pointer; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'" title="Edit Entry">✏️</button>
-                        <button onclick="deleteBillGroup('\${fireIdsEncoded}')" style="border:none; background:none; cursor:pointer; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'" title="Delete Entire Entry">🗑️</button>
+                        <button onclick="deleteBillGroup('${fireIdsEncoded}')" style="border:none; background:none; cursor:pointer; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'" title="Delete Entire Entry">🗑️</button>
                         ` : ''}
                     </td>
                 </tr>`;
@@ -2150,6 +2155,7 @@
         const newPass = document.getElementById('newSalesmanPass').value.trim();
         if(!newUser || !newPass) return alert("Fill in all salesman fields!");
         if(isAdminUser(newUser)) return alert("Cannot overwrite system administrator accounts.");
+        if(!/^[a-z0-9_]+$/.test(newUser)) return alert("Username can only use lowercase letters, numbers and underscore.");
         db.ref(`userConfigs/${newUser}`).set({ password: newPass }).then(() => {
             alert(`User "${newUser}" registered!`);
             document.getElementById('newSalesmanUser').value = ''; document.getElementById('newSalesmanPass').value = '';
